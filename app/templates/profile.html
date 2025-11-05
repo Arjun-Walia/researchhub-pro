@@ -1,0 +1,521 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - ResearchHub Pro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <span class="section-label">Account centre</span>
+        <h1 id="profileGreeting">Profile &amp; usage overview</h1>
+        <p class="page-subtitle">Review your account details, monitor plan usage, and keep collaborators aligned.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <button class="btn btn-secondary" type="button" onclick="loadProfile()"><i class="fas fa-rotate"></i> Refresh</button>
+        <a href="/settings" class="btn btn-ghost"><i class="fas fa-sliders-h"></i> Open settings</a>
+    </div>
+</div>
+
+<div id="profileAuthRequired" class="empty-state fade-up d-none">
+    <div class="empty-illustration"><i class="fas fa-user-lock"></i></div>
+    <h4 class="mb-2">Sign in to view your profile</h4>
+    <p class="mb-3 text-muted">Authenticate to review usage, plan limits, and collaboration history.</p>
+    <a href="/login" class="btn btn-primary"><i class="fas fa-lock"></i> Sign in</a>
+</div>
+
+<div id="profileLoading" class="empty-state fade-up">
+    <div class="empty-illustration"><i class="fas fa-spinner fa-spin"></i></div>
+    <p class="mb-0 text-muted">Gathering your account insights...</p>
+</div>
+
+<div id="profileContent" class="profile-layout d-none">
+    <div class="profile-overview-grid">
+        <section class="surface-card elevated profile-overview-card" aria-labelledby="profileIdentityHeading">
+            <div class="profile-overview-main">
+                <div class="profile-avatar-wrapper">
+                    <div class="profile-avatar">
+                        <div class="profile-avatar-fallback" id="profileAvatarFallback">RH</div>
+                        <img id="profileAvatarImage" alt="Profile avatar" class="d-none">
+                    </div>
+                    <span class="settings-help-text" id="profileLastSynced">Updates sync instantly across devices.</span>
+                </div>
+                <div>
+                    <span class="section-label">Identity</span>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <h2 id="profileDisplayName" class="mb-0">Researcher</h2>
+                        <span class="badge badge-neutral" id="profilePlanLevel">Starter</span>
+                    </div>
+                    <p class="mb-3 text-muted" id="profileBio">Add a bio from settings to personalise exports and share cards.</p>
+                    <div class="profile-meta-chip-group">
+                        <span class="profile-chip"><i class="fas fa-at"></i><span id="profileUsername">@username</span></span>
+                        <span class="profile-chip"><i class="fas fa-building"></i><span id="profileOrganization">Add organisation</span></span>
+                        <span class="profile-chip"><i class="fas fa-id-card-clip"></i><code id="profileUserId">ID-000</code></span>
+                    </div>
+                    <dl class="profile-contact-grid">
+                        <div>
+                            <dt>Email</dt>
+                            <dd><span id="profileEmail">-</span></dd>
+                        </div>
+                        <div>
+                            <dt>Phone</dt>
+                            <dd><span id="profilePhone">Add a phone number from settings</span></dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+            <div class="profile-overview-actions">
+                <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#editProfileModal"><i class="fas fa-pen me-1"></i>Edit profile</button>
+                <button class="btn btn-outline-primary" type="button" id="profileUpgradeBtn"><i class="fas fa-arrow-trend-up me-1"></i>Upgrade plan</button>
+                <button class="btn btn-ghost" type="button" id="profileInviteBtn"><i class="fas fa-user-plus me-1"></i>Invite teammates</button>
+            </div>
+        </section>
+
+        <section class="surface-card elevated profile-plan-card" aria-labelledby="profilePlanHeading">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                <div>
+                    <span class="section-label">Plan status</span>
+                    <h2 class="mb-1" id="profileTier">Starter</h2>
+                    <p class="mb-1 text-muted" id="profileQuotaText">Unlimited workspace previews</p>
+                    <p class="mb-0 text-muted" id="profileUsage">Try ResearchHub Pro without limits on saved queries.</p>
+                </div>
+                <div class="text-end text-muted small" id="profileLastSyncedHint">Refreshing...</div>
+            </div>
+            <div class="usage-metric-grid mt-3">
+                <div class="usage-metric">
+                    <span class="label">Plan badge</span>
+                    <span class="value"><span class="badge badge-neutral" id="profilePlanLevelBadge">Starter</span></span>
+                </div>
+                <div class="usage-metric">
+                    <span class="label">Quota reminder</span>
+                    <span class="value" id="profileQuotaReminder">Update soon</span>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="profile-lists-grid">
+        <section class="surface-card elevated" aria-labelledby="profileCollaborationHeading">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="mb-0" id="profileCollaborationHeading">Collaboration pulse</h3>
+                    <p class="mb-0 text-muted small">Latest work across projects, collections, and shared exports.</p>
+                </div>
+            </div>
+            <div id="profileCollaborationSkeleton" class="surface-subtle p-3 rounded text-center text-muted">
+                <i class="fas fa-spinner fa-spin mb-2"></i>
+                <p class="mb-0">Pulling collaboration history...</p>
+            </div>
+            <div id="profileCollaborationEmpty" class="surface-subtle p-3 rounded text-center text-muted d-none">
+                <i class="fas fa-circle-info mb-2"></i>
+                <p class="mb-0">Create a project or invite teammates to see collaboration updates.</p>
+            </div>
+            <div id="profileCollaborationList" class="activity-stack"></div>
+        </section>
+
+        <section class="surface-card elevated" aria-labelledby="profileActivityHeading">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="mb-0" id="profileActivityHeading">Workspace activity</h3>
+                    <p class="mb-0 text-muted small" id="profileActivitySummary">Latest events across the last 14 days.</p>
+                </div>
+                <span class="badge badge-neutral" id="profileActivityBadge">Loading...</span>
+            </div>
+            <div id="profileActivitySkeleton" class="surface-subtle p-3 rounded text-center text-muted">
+                <i class="fas fa-spinner fa-spin mb-2"></i>
+                <p class="mb-0">Fetching recent activity...</p>
+            </div>
+            <div id="profileActivityEmpty" class="surface-subtle p-3 rounded text-center text-muted d-none">
+                <i class="fas fa-inbox mb-2"></i>
+                <p class="mb-0">Run a search or create a project to populate your timeline.</p>
+            </div>
+            <div id="profileActivityList" class="activity-stack"></div>
+        </section>
+    </div>
+</div>
+
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editProfileForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editProfileFirstName" class="form-label">First name</label>
+                        <input type="text" class="form-control" id="editProfileFirstName" placeholder="Taylor">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editProfileLastName" class="form-label">Last name</label>
+                        <input type="text" class="form-control" id="editProfileLastName" placeholder="Morgan">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editProfileOrganization" class="form-label">Organisation</label>
+                        <input type="text" class="form-control" id="editProfileOrganization" placeholder="ResearchHub">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editProfileBio" class="form-label">Bio</label>
+                        <textarea class="form-control" id="editProfileBio" rows="3" placeholder="Describe your focus areas and responsibilities."></textarea>
+                    </div>
+                    <div class="mb-0">
+                        <label for="editProfilePhone" class="form-label">Phone number</label>
+                        <input type="tel" class="form-control" id="editProfilePhone" placeholder="+1 555 0100">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="editProfileSaveBtn">
+                        <span class="default-label">Save changes</span>
+                        <span class="spinner-label d-none"><span class="spinner-border spinner-border-sm me-1"></span>Saving...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deactivateAccountModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Deactivate account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>We will pause your workspace access and notify your account team. Reactivation can take up to 24 hours.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="deactivateConfirmBtn">Confirm deactivation</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Request deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>This will trigger a manual review to securely delete your workspace data. Our compliance team follows up within one business day.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="deleteConfirmBtn">Request deletion</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const elements = {
+        authRequired: document.getElementById('profileAuthRequired'),
+        loading: document.getElementById('profileLoading'),
+        content: document.getElementById('profileContent'),
+        avatar: document.getElementById('profileAvatarImage'),
+        avatarFallback: document.getElementById('profileAvatarFallback'),
+        tier: document.getElementById('profileTier'),
+        quotaText: document.getElementById('profileQuotaText'),
+        usage: document.getElementById('profileUsage'),
+        lastSynced: document.getElementById('profileLastSynced'),
+        greeting: document.getElementById('profileGreeting'),
+        email: document.getElementById('profileEmail'),
+        organization: document.getElementById('profileOrganization'),
+        bio: document.getElementById('profileBio'),
+        phone: document.getElementById('profilePhone'),
+        planLevel: document.getElementById('profilePlanLevel'),
+        collaborationList: document.getElementById('profileCollaborationList'),
+        collaborationEmpty: document.getElementById('profileCollaborationEmpty'),
+        activityList: document.getElementById('profileActivityList'),
+        activityEmpty: document.getElementById('profileActivityEmpty'),
+        editProfileForm: document.getElementById('editProfileForm'),
+        editSaveBtn: document.getElementById('editProfileSaveBtn'),
+        deactivateConfirmBtn: document.getElementById('deactivateConfirmBtn'),
+        deleteConfirmBtn: document.getElementById('deleteConfirmBtn'),
+        upgradeBtn: document.getElementById('profileUpgradeBtn'),
+        inviteBtn: document.getElementById('profileInviteBtn'),
+    collaborationSkeleton: document.getElementById('profileCollaborationSkeleton'),
+    activitySkeleton: document.getElementById('profileActivitySkeleton'),
+    planLevelBadge: document.getElementById('profilePlanLevelBadge'),
+    quotaReminder: document.getElementById('profileQuotaReminder'),
+    lastSyncedHint: document.getElementById('profileLastSyncedHint'),
+    activityBadge: document.getElementById('profileActivityBadge'),
+    activitySummary: document.getElementById('profileActivitySummary')
+    };
+
+    const planDetails = {
+        free: {
+            label: 'Starter',
+            quota: 'Unlimited workspace previews',
+            usage: 'Try ResearchHub Pro without limits on saved queries. Live export automation ships soon.',
+            accent: 'badge-neutral'
+        },
+        pro: {
+            label: 'Pro',
+            quota: '100 AI searches/day & 2 GB evidence storage',
+            usage: 'Full automation suite with dashboards, scheduled digests, and collaboration history.',
+            accent: 'badge-accent'
+        },
+        enterprise: {
+            label: 'Enterprise',
+            quota: 'Unlimited seats & private deployment',
+            usage: 'Dedicated model routing, data residency controls, and concierge enablement.',
+            accent: 'badge-positive'
+        }
+    };
+
+    function bindEvents() {
+        elements.editProfileForm?.addEventListener('submit', handleProfileUpdate);
+        elements.deactivateConfirmBtn?.addEventListener('click', () => {
+            showAlert('We are finalising the automated deactivation workflow. A success manager will follow up shortly.', 'info');
+        });
+        elements.deleteConfirmBtn?.addEventListener('click', () => {
+            showAlert('Account deletion is handled manually today. Expect a confirmation within 24 hours.', 'warning');
+        });
+        elements.upgradeBtn?.addEventListener('click', () => {
+            showAlert('Billing portal launches soon. Email billing@researchhub.pro for instant upgrades.', 'info');
+        });
+        elements.inviteBtn?.addEventListener('click', () => {
+            showAlert('Team invites will send personalised onboarding links when collaboration hubs ship.', 'info');
+        });
+    }
+
+    function populateProfile(user) {
+        const plan = planDetails[(user.plan || '').toLowerCase()] || planDetails.free;
+
+        elements.tier.textContent = plan.label;
+        elements.quotaText.textContent = plan.quota;
+        elements.usage.textContent = plan.usage;
+        elements.planLevel.textContent = plan.label;
+        elements.planLevel.className = `badge ${plan.accent}`;
+        if (elements.planLevelBadge) {
+            elements.planLevelBadge.textContent = plan.label;
+            elements.planLevelBadge.className = `badge ${plan.accent}`;
+        }
+        if (elements.quotaReminder) {
+            elements.quotaReminder.textContent = plan.quota;
+        }
+
+        const initials = [user.first_name, user.last_name].filter(Boolean).map(name => name[0]?.toUpperCase()).join('') || (user.username?.slice(0, 2) || 'RH').toUpperCase();
+        elements.avatarFallback.textContent = initials;
+        if (user.avatar_url) {
+            elements.avatar.src = user.avatar_url;
+            elements.avatar.classList.remove('d-none');
+            elements.avatarFallback.classList.add('d-none');
+        } else {
+            elements.avatar.classList.add('d-none');
+            elements.avatarFallback.classList.remove('d-none');
+        }
+
+        elements.greeting.textContent = user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.username || 'Your profile';
+        elements.email.textContent = user.email || 'No primary email on file';
+        elements.organization.textContent = user.organization || 'Add your organisation from settings';
+        elements.bio.textContent = user.bio || 'Tell collaborators about your focus areas to personalise exports.';
+        elements.phone.textContent = user.phone_number || user.phone || localStorage.getItem('profile-phone') || 'Add a phone number from settings';
+
+        const lastSyncedAt = user.updated_at || user.last_login_at;
+        const syncedText = lastSyncedAt ? `Last updated ${formatRelativeTime(lastSyncedAt)}` : 'Updates sync instantly across devices.';
+        elements.lastSynced.textContent = syncedText;
+        if (elements.lastSyncedHint) {
+            elements.lastSyncedHint.textContent = syncedText;
+        }
+    }
+
+    async function loadCollaborations() {
+        elements.collaborationSkeleton?.classList.remove('d-none');
+
+        try {
+            const response = await api.get('/research/projects');
+            const projects = Array.isArray(response) ? response : response.projects || [];
+            const collaborations = projects
+                .flatMap(project => (project.collaborators || []).map(collab => ({
+                    projectName: project.name,
+                    collaborator: collab.name || collab.email || 'Unknown collaborator',
+                    role: collab.role || 'Contributor',
+                    lastActivity: collab.last_activity || project.updated_at || project.created_at
+                })))
+                .sort((a, b) => new Date(b.lastActivity || 0) - new Date(a.lastActivity || 0))
+                .slice(0, 6);
+
+            renderCollaborations(collaborations);
+        } catch (error) {
+            console.error('Failed to load collaborations:', error);
+            showAlert('Unable to load collaboration history.', 'warning');
+            elements.collaborationEmpty.classList.remove('d-none');
+        } finally {
+            elements.collaborationSkeleton?.classList.add('d-none');
+        }
+    }
+
+    function renderCollaborations(collaborations) {
+        if (!collaborations.length) {
+            elements.collaborationEmpty.classList.remove('d-none');
+            elements.collaborationList.innerHTML = '';
+            return;
+        }
+
+        elements.collaborationEmpty.classList.add('d-none');
+        elements.collaborationList.innerHTML = collaborations.map(item => `
+            <div class="activity-row">
+                <div>
+                    <strong>${item.projectName}</strong>
+                    <p class="mb-0 text-muted small">${item.collaborator} - ${item.role}</p>
+                </div>
+                <span class="badge badge-neutral">${item.lastActivity ? formatRelativeTime(item.lastActivity) : 'Recently'}</span>
+            </div>
+        `).join('');
+    }
+
+    async function loadActivity() {
+        elements.activitySkeleton?.classList.remove('d-none');
+
+        try {
+            const response = await api.get('/analytics/dashboard');
+            const activities = Array.isArray(response.activities) ? response.activities : (response.recent_activity || []);
+            renderActivity(activities);
+        } catch (error) {
+            console.error('Failed to load activity:', error);
+            elements.activityEmpty.classList.remove('d-none');
+            if (elements.activityBadge) {
+                elements.activityBadge.textContent = 'Activity unavailable';
+            }
+        } finally {
+            elements.activitySkeleton?.classList.add('d-none');
+        }
+    }
+
+    function renderActivity(activities) {
+        if (!activities.length) {
+            elements.activityEmpty.classList.remove('d-none');
+            elements.activityList.innerHTML = '';
+            if (elements.activityBadge) {
+                elements.activityBadge.textContent = 'No recent activity';
+            }
+            elements.activitySummary?.classList.add('d-none');
+            return;
+        }
+
+        elements.activityEmpty.classList.add('d-none');
+        elements.activityList.innerHTML = activities.slice(0, 6).map(activity => `
+            <div class="activity-row">
+                <div>
+                    <strong>${activity.title || activity.type || 'Workspace activity'}</strong>
+                    <p class="mb-0 text-muted small">${activity.detail || activity.description || 'An update was recorded.'}</p>
+                </div>
+                <span class="badge badge-neutral">${activity.timestamp ? formatRelativeTime(activity.timestamp) : 'Moments ago'}</span>
+            </div>
+        `).join('');
+
+        if (elements.activityBadge) {
+            elements.activityBadge.textContent = `${activities.length} event${activities.length === 1 ? '' : 's'}`;
+        }
+        if (elements.activitySummary) {
+            elements.activitySummary.classList.remove('d-none');
+            elements.activitySummary.textContent = 'Recent workspace signals across the last 14 days.';
+        }
+    }
+
+    async function handleProfileUpdate(event) {
+        event.preventDefault();
+
+        const phoneValue = document.getElementById('editProfilePhone').value.trim();
+        const payload = {
+            first_name: document.getElementById('editProfileFirstName').value.trim(),
+            last_name: document.getElementById('editProfileLastName').value.trim(),
+            organization: document.getElementById('editProfileOrganization').value.trim(),
+            bio: document.getElementById('editProfileBio').value.trim()
+        };
+
+        const submitBtn = elements.editSaveBtn;
+        submitBtn.disabled = true;
+        submitBtn.querySelector('.default-label').classList.add('d-none');
+        submitBtn.querySelector('.spinner-label').classList.remove('d-none');
+
+        try {
+            const response = await api.put('/auth/me', payload);
+            const updatedUser = response.user || response;
+            populateProfile(updatedUser);
+            if (phoneValue) {
+                localStorage.setItem('profile-phone', phoneValue);
+            } else {
+                localStorage.removeItem('profile-phone');
+            }
+            elements.phone.textContent = phoneValue || 'Add a phone number from settings';
+            showAlert('Profile updated successfully.', 'success');
+            const modalEl = document.getElementById('editProfileModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            modal?.hide();
+        } catch (error) {
+            console.error('Profile update failed:', error);
+            showAlert(error.message || 'Failed to update profile.', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.querySelector('.default-label').classList.remove('d-none');
+            submitBtn.querySelector('.spinner-label').classList.add('d-none');
+        }
+    }
+
+    async function loadProfile() {
+        if (!isAuthenticated()) {
+            elements.loading.classList.add('d-none');
+            elements.authRequired.classList.remove('d-none');
+            return;
+        }
+
+        elements.authRequired.classList.add('d-none');
+        elements.loading.classList.remove('d-none');
+
+        try {
+            const response = await api.get('/auth/me');
+            const user = response.user || response;
+
+            if (!user) {
+                throw new ApiError('User payload missing');
+            }
+
+            populateProfile(user);
+            await Promise.all([loadCollaborations(), loadActivity()]);
+
+            elements.loading.classList.add('d-none');
+            elements.content.classList.remove('d-none');
+
+            preloadEditModal(user);
+        } catch (error) {
+            console.error('Profile load failed:', error);
+            elements.loading.classList.add('d-none');
+            showAlert(error.message || 'Unable to load profile information.', 'error');
+        }
+    }
+
+    function preloadEditModal(user) {
+        document.getElementById('editProfileFirstName').value = user.first_name || '';
+        document.getElementById('editProfileLastName').value = user.last_name || '';
+        document.getElementById('editProfileOrganization').value = user.organization || '';
+        document.getElementById('editProfileBio').value = user.bio || '';
+        const storedPhone = localStorage.getItem('profile-phone') || '';
+        const phoneInput = document.getElementById('editProfilePhone');
+        if (phoneInput) {
+            phoneInput.value = user.phone_number || user.phone || storedPhone;
+        }
+    }
+
+    function init() {
+        bindEvents();
+        loadProfile();
+        window.loadProfile = loadProfile;
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init, { once: true });
+    } else {
+        init();
+    }
+})();
+</script>
+{% endblock %}

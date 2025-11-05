@@ -1,0 +1,1650 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - ResearchHub Pro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <span class="section-label">Account settings</span>
+        <h1>Configure your ResearchHub Pro command centre</h1>
+        <p class="page-subtitle">Fine-tune identity, security, notifications, integrations, and billing so your research ops stay tight.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <button class="btn btn-secondary" type="button" onclick="refreshSettings()"><i class="fas fa-rotate"></i> Refresh</button>
+        <a href="/profile" class="btn btn-ghost"><i class="fas fa-id-card"></i> View profile</a>
+    </div>
+</div>
+
+<div id="settingsAuthRequired" class="empty-state fade-up d-none">
+    <div class="empty-illustration"><i class="fas fa-user-lock"></i></div>
+    <h4 class="mb-2">Sign in required</h4>
+    <p class="mb-3 text-muted">Authenticate to manage profile, security, and billing preferences.</p>
+    <a href="/login" class="btn btn-primary"><i class="fas fa-lock"></i> Sign in</a>
+</div>
+
+<div id="settingsLoading" class="empty-state fade-up">
+    <div class="empty-illustration"><i class="fas fa-spinner fa-spin"></i></div>
+    <p class="mb-0 text-muted">Loading your account preferences...</p>
+</div>
+
+<div id="settingsShell" class="settings-layout d-none">
+    <aside class="settings-nav">
+        <div>
+            <h2 class="h5 mb-1">Navigation</h2>
+            <p class="mb-0 text-muted small">Jump to any settings category instantly.</p>
+        </div>
+        <div class="nav flex-column nav-pills" id="settingsTabNav" role="tablist" aria-orientation="vertical">
+            <button class="nav-link active" id="tab-general-link" data-bs-toggle="pill" data-bs-target="#tab-general" type="button" role="tab" aria-controls="tab-general" aria-selected="true"><i class="fas fa-user-gear me-2"></i>General</button>
+            <button class="nav-link" id="tab-security-link" data-bs-toggle="pill" data-bs-target="#tab-security" type="button" role="tab" aria-controls="tab-security" aria-selected="false"><i class="fas fa-shield-halved me-2"></i>Security</button>
+            <button class="nav-link" id="tab-api-link" data-bs-toggle="pill" data-bs-target="#tab-api" type="button" role="tab" aria-controls="tab-api" aria-selected="false"><i class="fas fa-code-branch me-2"></i>API & Integrations</button>
+            <button class="nav-link" id="tab-notifications-link" data-bs-toggle="pill" data-bs-target="#tab-notifications" type="button" role="tab" aria-controls="tab-notifications" aria-selected="false"><i class="fas fa-bell me-2"></i>Notifications</button>
+            <button class="nav-link" id="tab-workspace-link" data-bs-toggle="pill" data-bs-target="#tab-workspace" type="button" role="tab" aria-controls="tab-workspace" aria-selected="false"><i class="fas fa-desktop me-2"></i>Workspace</button>
+            <button class="nav-link" id="tab-privacy-link" data-bs-toggle="pill" data-bs-target="#tab-privacy" type="button" role="tab" aria-controls="tab-privacy" aria-selected="false"><i class="fas fa-user-shield me-2"></i>Privacy & Data</button>
+            <button class="nav-link" id="tab-advanced-link" data-bs-toggle="pill" data-bs-target="#tab-advanced" type="button" role="tab" aria-controls="tab-advanced" aria-selected="false"><i class="fas fa-toolbox me-2"></i>Advanced</button>
+        </div>
+    </aside>
+
+    <div class="settings-content tab-content" id="settingsTabContent">
+        <div class="tab-pane fade show active" id="tab-general" role="tabpanel" aria-labelledby="tab-general-link">
+            <section class="settings-card" aria-labelledby="generalSettingsHeading">
+                <header>
+                    <span class="section-label">Profile</span>
+                    <h2 id="generalSettingsHeading" class="mb-0">General information</h2>
+                    <p>Everything stakeholders see in exports, share links, and activity feeds.</p>
+                </header>
+                <div class="settings-notice-banner" role="status">
+                    <span class="icon" aria-hidden="true"><i class="fas fa-circle-info"></i></span>
+                    <div>
+                        <strong>Pro tip for teams</strong>
+                        <p class="mb-0">Personalise your avatar and bio so ResearchHub AI introduces you with the right domain context in collaborative threads.</p>
+                    </div>
+                    <div class="actions">
+                        <button type="button" class="btn btn-ghost btn-sm"><i class="fas fa-wand-magic-sparkles me-1"></i>Generate bio</button>
+                        <button type="button" class="btn btn-primary btn-sm"><i class="fas fa-upload me-1"></i>Upload brand kit</button>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-3 align-items-start">
+                    <div class="profile-avatar-wrapper">
+                        <div class="profile-avatar" id="settingsAvatar">
+                            <div class="profile-avatar-fallback" id="settingsAvatarFallback">RH</div>
+                            <img id="settingsAvatarImage" alt="Profile avatar preview">
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="settingsAvatarBtn"><i class="fas fa-camera me-1"></i>Upload avatar</button>
+                        <input type="file" id="settingsAvatarInput" accept="image/*" hidden>
+                        <span class="settings-help-text">PNG or JPG, 1MB max. Cloud sync ships shortly.</span>
+                    </div>
+                    <form id="generalSettingsForm" class="d-grid gap-3 flex-grow-1" novalidate>
+                        <div class="settings-field-grid">
+                            <div>
+                                <label for="settingsFirstName" class="form-label">First name</label>
+                                <input type="text" class="form-control" id="settingsFirstName" autocomplete="given-name">
+                            </div>
+                            <div>
+                                <label for="settingsLastName" class="form-label">Last name</label>
+                                <input type="text" class="form-control" id="settingsLastName" autocomplete="family-name">
+                            </div>
+                            <div>
+                                <label for="settingsUsername" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="settingsUsername" disabled aria-disabled="true">
+                                <div class="form-text">Usernames are unique and currently immutable.</div>
+                            </div>
+                            <div>
+                                <label for="settingsEmail" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="settingsEmail" disabled aria-disabled="true">
+                                <div class="form-text">Need to update? Contact <a href="mailto:hello@researchhub.pro">support</a>.</div>
+                            </div>
+                            <div>
+                                <label for="settingsOrganization" class="form-label">Organization</label>
+                                <input type="text" class="form-control" id="settingsOrganization" autocomplete="organization">
+                            </div>
+                            <div>
+                                <label for="settingsPhone" class="form-label">Phone number <span class="label-optional">Optional</span></label>
+                                <input type="tel" class="form-control" id="settingsPhone" placeholder="Add for executive exports">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="settingsBio" class="form-label">Professional bio</label>
+                            <textarea class="form-control" id="settingsBio" rows="3" maxlength="480" placeholder="Summarise your expertise, domains, and stakeholder focus."></textarea>
+                            <div class="form-text">Used in share cards, AI introductions, and exported briefs.</div>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary" id="generalSaveBtn">
+                                <span class="default-label"><i class="fas fa-check me-1"></i>Save updates</span>
+                                <span class="spinner-label d-none"><i class="fas fa-spinner fa-spin me-2"></i>Saving...</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </div>
+
+        <div class="tab-pane fade" id="tab-security" role="tabpanel" aria-labelledby="tab-security-link">
+            <section class="settings-card" aria-labelledby="securityHeading">
+                <header>
+                    <span class="section-label">Security</span>
+                    <h2 id="securityHeading" class="mb-0">Password & authentication</h2>
+                    <p>Keep your credentials sharp and monitor recent sign-ins.</p>
+                </header>
+                <div class="settings-pane-divider">
+                    <header>
+                        <div>
+                            <h2>Password hygiene at a glance</h2>
+                            <p>Refresh secrets with a cadence that matches your compliance posture and signal hygiene for stakeholders.</p>
+                        </div>
+                        <div class="action-group">
+                            <button type="button" class="btn btn-outline-primary btn-sm"><i class="fas fa-clock-rotate-left me-1"></i>Rotation policy</button>
+                            <button type="button" class="btn btn-ghost btn-sm"><i class="fas fa-bolt me-1"></i>Auto-generate</button>
+                        </div>
+                    </header>
+                </div>
+                <form id="passwordSettingsForm" class="d-grid gap-3" novalidate>
+                    <div class="settings-inline-group">
+                        <span class="badge badge-neutral" id="passwordLastLogin"><i class="fas fa-clock me-1"></i>Loading last login...</span>
+                        <span class="settings-help-text">Passwords must include 8+ characters and avoid common phrases.</span>
+                    </div>
+                    <div class="settings-field-grid">
+                        <div>
+                            <label for="passwordCurrent" class="form-label">Current password</label>
+                            <input type="password" class="form-control" id="passwordCurrent" autocomplete="current-password" required aria-required="true">
+                        </div>
+                        <div>
+                            <label for="passwordNew" class="form-label">New password</label>
+                            <input type="password" class="form-control" id="passwordNew" autocomplete="new-password" minlength="8" required aria-required="true">
+                        </div>
+                        <div>
+                            <label for="passwordConfirm" class="form-label">Confirm new password</label>
+                            <input type="password" class="form-control" id="passwordConfirm" autocomplete="new-password" minlength="8" required aria-required="true">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-secondary" id="passwordSaveBtn">
+                            <span class="default-label"><i class="fas fa-key me-1"></i>Update password</span>
+                            <span class="spinner-label d-none"><i class="fas fa-spinner fa-spin me-2"></i>Updating...</span>
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="settings-card" aria-labelledby="twoFactorHeading">
+                <header class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="section-label">Multi-factor</span>
+                        <h2 id="twoFactorHeading" class="mb-0">Two-factor authentication</h2>
+                        <p>Lock down access with authenticator apps or hardware keys.</p>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="twoFactorToggle">
+                        <label class="form-check-label" for="twoFactorToggle">Enable 2FA</label>
+                    </div>
+                </header>
+                <div class="settings-integrations-grid mb-3">
+                    <article class="settings-integration-card" aria-live="polite">
+                        <div class="card-header">
+                            <div class="icon" aria-hidden="true"><i class="fas fa-mobile-screen-button"></i></div>
+                            <div>
+                                <h3>Authenticator apps</h3>
+                                <p class="mb-0">Compatible with 1Password, Authy, Google Authenticator, and any TOTP-ready client.</p>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <span class="status"><i class="fas fa-circle-check"></i> Recommended</span>
+                            <div class="actions">
+                                <button type="button" class="btn btn-outline-primary btn-sm"><i class="fas fa-qrcode me-1"></i>Reveal QR</button>
+                                <button type="button" class="btn btn-ghost btn-sm"><i class="fas fa-book me-1"></i>Docs</button>
+                            </div>
+                        </div>
+                    </article>
+                    <article class="settings-integration-card">
+                        <div class="card-header">
+                            <div class="icon" aria-hidden="true"><i class="fas fa-key"></i></div>
+                            <div>
+                                <h3>Security keys</h3>
+                                <p class="mb-0">Hardware-backed keys (YubiKey, Titan) enforce phishing-resistant login flows.</p>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <span class="status is-maintenance"><i class="fas fa-screwdriver-wrench"></i> Early access</span>
+                            <div class="actions">
+                                <button type="button" class="btn btn-outline-primary btn-sm" disabled><i class="fas fa-lock me-1"></i>Beta waitlist</button>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+                <div class="surface-subtle p-3 rounded" id="twoFactorStatus">
+                    <p class="mb-2"><strong>Status:</strong> <span id="twoFactorStatusText">Disabled</span></p>
+                    <p class="mb-0 text-muted">Enable to require a one-time code on every new device.</p>
+                </div>
+                <div class="qr-placeholder" id="twoFactorInstructions" hidden>
+                    <p class="mb-2"><strong>Scan this QR in your authenticator app</strong></p>
+                    <p class="mb-1">Secret: <code id="twoFactorSecret">RH-PRO-000-000</code></p>
+                    <p class="mb-0">Enter the 6-digit code to finish setup. Hardware key support lands soon.</p>
+                </div>
+            </section>
+
+            <section class="settings-card" aria-labelledby="signInHistoryHeading">
+                <header>
+                    <span class="section-label">Sessions</span>
+                    <h2 id="signInHistoryHeading" class="mb-0">Recent sign-in history</h2>
+                    <p>Track where your account was accessed recently.</p>
+                </header>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Device</th>
+                                <th scope="col">Location</th>
+                                <th scope="col">IP</th>
+                                <th scope="col">Last seen</th>
+                                <th scope="col">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="signInHistoryBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <div class="tab-pane fade" id="tab-api" role="tabpanel" aria-labelledby="tab-api-link">
+            <section class="settings-card" aria-labelledby="apiKeysHeading">
+                <header>
+                    <span class="section-label">Integrations</span>
+                    <h2 id="apiKeysHeading" class="mb-0">API keys & automation</h2>
+                    <p>Manage direct AI and automation integrations for your workspace.</p>
+                </header>
+                <div class="integration-list d-grid gap-3">
+                    <div class="surface-subtle p-3 rounded integration-card" data-provider="perplexity" data-field="perplexity_api_key">
+                        <div class="integration-header d-flex flex-wrap justify-content-between align-items-start gap-3">
+                            <div class="integration-brand d-flex align-items-start gap-3">
+                                <span class="integration-icon integration-icon-perplexity" aria-hidden="true"><i class="fas fa-sparkles"></i></span>
+                                <div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <strong>Perplexity API</strong>
+                                        <span class="badge badge-ghost integration-capability" data-capability="search">Search unlocked</span>
+                                    </div>
+                                    <p class="mb-0 text-muted">Use your own Perplexity quota for high-fidelity answers.</p>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="btn btn-ghost btn-sm integration-help" type="button" data-provider="perplexity" aria-label="Perplexity help"><i class="fas fa-circle-info"></i></button>
+                                <span class="badge badge-neutral integration-status">Status: Not linked</span>
+                            </div>
+                        </div>
+                        <div class="integration-meta-row text-muted small">
+                            <span class="integration-meta-label">Last validated</span>
+                            <span class="integration-meta" data-meta="last-validated">Never</span>
+                            <span class="integration-meta" data-meta="models_detected"></span>
+                        </div>
+                        <form class="integration-form d-grid gap-3 mt-3" data-provider="perplexity" novalidate>
+                            <div class="input-group">
+                                <input type="password" class="form-control integration-input" data-provider="perplexity" placeholder="pk-xxxxxxxx" autocomplete="off">
+                                <button class="btn btn-outline-secondary integration-visibility" type="button" data-provider="perplexity" aria-label="Toggle Perplexity key visibility"><i class="fas fa-eye"></i></button>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                                <div class="settings-help-text">Validated via Perplexity models endpoint, encrypted immediately after.</div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="submit" class="btn btn-primary integration-save" data-provider="perplexity"><i class="fas fa-check me-1"></i>Verify &amp; Save</button>
+                                    <button type="button" class="btn btn-outline-danger integration-remove" data-provider="perplexity"><i class="fas fa-trash me-1"></i>Remove key</button>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="integration-activity mt-3" data-provider="perplexity">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="integration-activity-title mb-0">Recent activity</h6>
+                                <span class="badge badge-ghost" data-provider="perplexity" data-meta="activity-count">0 events</span>
+                            </div>
+                            <ul class="integration-log list-unstyled mb-0" aria-live="polite"></ul>
+                        </div>
+                    </div>
+
+                    <div class="surface-subtle p-3 rounded integration-card" data-provider="openai" data-field="openai_api_key">
+                        <div class="integration-header d-flex flex-wrap justify-content-between align-items-start gap-3">
+                            <div class="integration-brand d-flex align-items-start gap-3">
+                                <span class="integration-icon integration-icon-openai" aria-hidden="true"><i class="fas fa-brain"></i></span>
+                                <div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <strong>OpenAI</strong>
+                                        <span class="badge badge-ghost integration-capability" data-capability="ai-models">Models unlocked</span>
+                                    </div>
+                                    <p class="mb-0 text-muted">Enable GPT-powered briefings, embeddings, and custom agents.</p>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="btn btn-ghost btn-sm integration-help" type="button" data-provider="openai" aria-label="OpenAI help"><i class="fas fa-circle-info"></i></button>
+                                <span class="badge badge-neutral integration-status">Status: Not linked</span>
+                            </div>
+                        </div>
+                        <div class="integration-meta-row text-muted small">
+                            <span class="integration-meta-label">Last validated</span>
+                            <span class="integration-meta" data-meta="last-validated">Never</span>
+                            <span class="integration-meta" data-meta="model_count"></span>
+                        </div>
+                        <form class="integration-form d-grid gap-3 mt-3" data-provider="openai" novalidate>
+                            <div class="input-group">
+                                <input type="password" class="form-control integration-input" data-provider="openai" placeholder="sk-xxxxxxxx" autocomplete="off">
+                                <button class="btn btn-outline-secondary integration-visibility" type="button" data-provider="openai" aria-label="Toggle OpenAI key visibility"><i class="fas fa-eye"></i></button>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                                <div class="settings-help-text">Stored encrypted. Supports GPT-4, GPT-4o, and Embeddings APIs.</div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="submit" class="btn btn-primary integration-save" data-provider="openai"><i class="fas fa-check me-1"></i>Verify &amp; Save</button>
+                                    <button type="button" class="btn btn-outline-danger integration-remove" data-provider="openai"><i class="fas fa-trash me-1"></i>Remove</button>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="integration-activity mt-3" data-provider="openai">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="integration-activity-title mb-0">Recent activity</h6>
+                                <span class="badge badge-ghost" data-provider="openai" data-meta="activity-count">0 events</span>
+                            </div>
+                            <ul class="integration-log list-unstyled mb-0" aria-live="polite"></ul>
+                        </div>
+                    </div>
+
+                    <div class="surface-subtle p-3 rounded integration-card" data-provider="anthropic" data-field="anthropic_api_key">
+                        <div class="integration-header d-flex flex-wrap justify-content-between align-items-start gap-3">
+                            <div class="integration-brand d-flex align-items-start gap-3">
+                                <span class="integration-icon integration-icon-anthropic" aria-hidden="true"><i class="fas fa-feather"></i></span>
+                                <div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <strong>Anthropic</strong>
+                                        <span class="badge badge-ghost integration-capability" data-capability="ai-models">Claude ready</span>
+                                    </div>
+                                    <p class="mb-0 text-muted">Route long-form syntheses to Claude models as they roll out.</p>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="btn btn-ghost btn-sm integration-help" type="button" data-provider="anthropic" aria-label="Anthropic help"><i class="fas fa-circle-info"></i></button>
+                                <span class="badge badge-neutral integration-status">Status: Not linked</span>
+                            </div>
+                        </div>
+                        <div class="integration-meta-row text-muted small">
+                            <span class="integration-meta-label">Last validated</span>
+                            <span class="integration-meta" data-meta="last-validated">Never</span>
+                            <span class="integration-meta" data-meta="model_count"></span>
+                        </div>
+                        <form class="integration-form d-grid gap-3 mt-3" data-provider="anthropic" novalidate>
+                            <div class="input-group">
+                                <input type="password" class="form-control integration-input" data-provider="anthropic" placeholder="anthropic-key" autocomplete="off">
+                                <button class="btn btn-outline-secondary integration-visibility" type="button" data-provider="anthropic" aria-label="Toggle Anthropic key visibility"><i class="fas fa-eye"></i></button>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                                <div class="settings-help-text">Validate instantly against Anthropic's model registry before storing.</div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="submit" class="btn btn-primary integration-save" data-provider="anthropic"><i class="fas fa-check me-1"></i>Verify &amp; Save</button>
+                                    <button type="button" class="btn btn-outline-danger integration-remove" data-provider="anthropic"><i class="fas fa-trash me-1"></i>Remove</button>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="integration-activity mt-3" data-provider="anthropic">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="integration-activity-title mb-0">Recent activity</h6>
+                                <span class="badge badge-ghost" data-provider="anthropic" data-meta="activity-count">0 events</span>
+                            </div>
+                            <ul class="integration-log list-unstyled mb-0" aria-live="polite"></ul>
+                        </div>
+                    </div>
+
+                    <div class="surface-subtle p-3 rounded integration-card" data-provider="serpapi" data-field="serpapi_api_key">
+                        <div class="integration-header d-flex flex-wrap justify-content-between align-items-start gap-3">
+                            <div class="integration-brand d-flex align-items-start gap-3">
+                                <span class="integration-icon integration-icon-serpapi" aria-hidden="true"><i class="fas fa-globe"></i></span>
+                                <div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <strong>SerpAPI</strong>
+                                        <span class="badge badge-ghost integration-capability" data-capability="enrichment">Enrichment</span>
+                                    </div>
+                                    <p class="mb-0 text-muted">Augment AI with live web, news, and map coverage.</p>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="btn btn-ghost btn-sm integration-help" type="button" data-provider="serpapi" aria-label="SerpAPI help"><i class="fas fa-circle-info"></i></button>
+                                <span class="badge badge-neutral integration-status">Status: Not linked</span>
+                            </div>
+                        </div>
+                        <div class="integration-meta-row text-muted small">
+                            <span class="integration-meta-label">Last validated</span>
+                            <span class="integration-meta" data-meta="last-validated">Never</span>
+                            <span class="integration-meta" data-meta="plan"></span>
+                            <span class="integration-meta" data-meta="requests_left"></span>
+                        </div>
+                        <form class="integration-form d-grid gap-3 mt-3" data-provider="serpapi" novalidate>
+                            <div class="input-group">
+                                <input type="password" class="form-control integration-input" data-provider="serpapi" placeholder="serpapi-key" autocomplete="off">
+                                <button class="btn btn-outline-secondary integration-visibility" type="button" data-provider="serpapi" aria-label="Toggle SerpAPI key visibility"><i class="fas fa-eye"></i></button>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                                <div class="settings-help-text">Plan and quota synced from SerpAPI on every verification.</div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="submit" class="btn btn-primary integration-save" data-provider="serpapi"><i class="fas fa-check me-1"></i>Verify &amp; Save</button>
+                                    <button type="button" class="btn btn-outline-danger integration-remove" data-provider="serpapi"><i class="fas fa-trash me-1"></i>Remove</button>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="integration-activity mt-3" data-provider="serpapi">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="integration-activity-title mb-0">Recent activity</h6>
+                                <span class="badge badge-ghost" data-provider="serpapi" data-meta="activity-count">0 events</span>
+                            </div>
+                            <ul class="integration-log list-unstyled mb-0" aria-live="polite"></ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="settings-card" aria-labelledby="oauthHeading">
+                <header>
+                    <span class="section-label">Connections</span>
+                    <h2 id="oauthHeading" class="mb-0">OAuth providers</h2>
+                    <p>Connect social or enterprise identity providers for smoother sign-ins.</p>
+                </header>
+                <div class="settings-notice-banner mb-3">
+                    <span class="icon" aria-hidden="true"><i class="fas fa-circle-nodes"></i></span>
+                    <div>
+                        <strong>Single sign-on improvements land next</strong>
+                        <p class="mb-0">Bring your own identity provider with SAML and SCIM tooling rolling out through the enterprise roadmap.</p>
+                    </div>
+                </div>
+                <div class="device-list" id="oauthList">
+                    <div class="device-row" data-provider="google">
+                        <div>
+                            <strong>Google</strong>
+                            <p class="mb-0 small text-muted">One-click sign-in for Gmail and Workspace accounts.</p>
+                        </div>
+                        <button class="btn btn-outline-primary" type="button" data-oauth-provider="google">Connect</button>
+                    </div>
+                    <div class="device-row" data-provider="github">
+                        <div>
+                            <strong>GitHub</strong>
+                            <p class="mb-0 small text-muted">Ideal for developer and product research teams.</p>
+                        </div>
+                        <button class="btn btn-outline-primary" type="button" data-oauth-provider="github">Connect</button>
+                    </div>
+                    <div class="device-row" data-provider="discord">
+                        <div>
+                            <strong>Discord</strong>
+                            <p class="mb-0 small text-muted">Sync community roles with workspace permissions.</p>
+                        </div>
+                        <button class="btn btn-outline-primary" type="button" data-oauth-provider="discord">Connect</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="tab-pane fade" id="tab-notifications" role="tabpanel" aria-labelledby="tab-notifications-link">
+            <section class="settings-card" aria-labelledby="notificationsHeading">
+                <header>
+                    <span class="section-label">Signals</span>
+                    <h2 id="notificationsHeading" class="mb-0">Notification preferences</h2>
+                    <p>Choose how we notify you across channels.</p>
+                </header>
+                <div class="table-responsive">
+                    <table class="notification-matrix" id="notificationTable">
+                        <thead>
+                            <tr>
+                                <th>Event</th>
+                                <th>Email</th>
+                                <th>Push</th>
+                                <th>Desktop</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Project updates</strong><br><span class="text-muted small">Assignments, status changes, and approvals.</span></td>
+                                <td><input type="checkbox" data-pref-group="project-updates" data-pref-channel="email"></td>
+                                <td><input type="checkbox" data-pref-group="project-updates" data-pref-channel="push"></td>
+                                <td><input type="checkbox" data-pref-group="project-updates" data-pref-channel="desktop"></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Collection changes</strong><br><span class="text-muted small">New sources, comments, or share events.</span></td>
+                                <td><input type="checkbox" data-pref-group="collection-changes" data-pref-channel="email"></td>
+                                <td><input type="checkbox" data-pref-group="collection-changes" data-pref-channel="push"></td>
+                                <td><input type="checkbox" data-pref-group="collection-changes" data-pref-channel="desktop"></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Export completion</strong><br><span class="text-muted small">Large exports, digests, and scheduled briefs.</span></td>
+                                <td><input type="checkbox" data-pref-group="export-ready" data-pref-channel="email"></td>
+                                <td><input type="checkbox" data-pref-group="export-ready" data-pref-channel="push"></td>
+                                <td><input type="checkbox" data-pref-group="export-ready" data-pref-channel="desktop"></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Platform announcements</strong><br><span class="text-muted small">New features, maintenance, and compliance notes.</span></td>
+                                <td><input type="checkbox" data-pref-group="announcements" data-pref-channel="email"></td>
+                                <td><input type="checkbox" data-pref-group="announcements" data-pref-channel="push"></td>
+                                <td><input type="checkbox" data-pref-group="announcements" data-pref-channel="desktop"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <div class="tab-pane fade" id="tab-workspace" role="tabpanel" aria-labelledby="tab-workspace-link">
+            <section class="settings-card" aria-labelledby="appearanceHeading">
+                <header>
+                    <span class="section-label">Interface</span>
+                    <h2 id="appearanceHeading" class="mb-0">Workspace & appearance</h2>
+                    <p>Choose theme, language, and timezone defaults for your account.</p>
+                </header>
+                <form id="appearanceForm" class="d-grid gap-3" novalidate>
+                    <div class="settings-field-grid">
+                        <div>
+                            <label for="appearanceThemeSelect" class="form-label">Theme</label>
+                            <select class="form-select" id="appearanceThemeSelect">
+                                <option value="dark">Dark</option>
+                                <option value="light">Light</option>
+                            </select>
+                            <div class="form-text">Applies instantly across the platform.</div>
+                        </div>
+                        <div>
+                            <label for="languageSelect" class="form-label">Language</label>
+                            <select class="form-select" id="languageSelect">
+                                <option value="en-US">English (US)</option>
+                                <option value="en-GB">English (UK)</option>
+                                <option value="fr-FR">Français</option>
+                                <option value="de-DE">Deutsch</option>
+                                <option value="es-ES">Español</option>
+                                <option value="ja-JP">日本語</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="timezoneSelect" class="form-label">Timezone</label>
+                            <select class="form-select timezone-select" id="timezoneSelect">
+                                <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                                <option value="America/Denver">Mountain Time (MT)</option>
+                                <option value="America/Chicago">Central Time (CT)</option>
+                                <option value="America/New_York">Eastern Time (ET)</option>
+                                <option value="Europe/London">London (GMT)</option>
+                                <option value="Europe/Paris">Central Europe (CET)</option>
+                                <option value="Asia/Singapore">Singapore</option>
+                                <option value="Asia/Tokyo">Tokyo</option>
+                                <option value="Australia/Sydney">Sydney</option>
+                            </select>
+                            <div class="form-text">Used for scheduling exports and retention policies.</div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-ghost" id="appearanceResetBtn">Reset</button>
+                        <button type="submit" class="btn btn-primary" id="appearanceSaveBtn"><i class="fas fa-save me-1"></i>Save preferences</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+
+        <div class="tab-pane fade" id="tab-privacy" role="tabpanel" aria-labelledby="tab-privacy-link">
+            <section class="settings-card" aria-labelledby="privacyHeading">
+                <header>
+                    <span class="section-label">Compliance</span>
+                    <h2 id="privacyHeading" class="mb-0">Privacy & data governance</h2>
+                    <p>Export personal data, review policies, and stay compliant.</p>
+                </header>
+                <div class="d-grid gap-3">
+                    <button class="btn btn-outline-primary" type="button" id="dataExportBtn"><i class="fas fa-download me-1"></i>Request data export</button>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-ghost" href="/privacy" target="_blank" rel="noopener">Privacy policy</a>
+                        <a class="btn btn-ghost" href="/terms" target="_blank" rel="noopener">Terms of service</a>
+                    </div>
+                    <p class="mb-0 text-muted small">Exports complete within 72 hours. We'll notify you when ready.</p>
+                </div>
+            </section>
+        </div>
+
+        <div class="tab-pane fade" id="tab-advanced" role="tabpanel" aria-labelledby="tab-advanced-link">
+            <section class="settings-card" aria-labelledby="billingHeading">
+                <header>
+                    <span class="section-label">Commerce</span>
+                    <h2 id="billingHeading" class="mb-0">Billing & address</h2>
+                    <p>Keep invoices, tax, and shipping details accurate.</p>
+                </header>
+                <form id="billingForm" class="d-grid gap-3" novalidate>
+                    <div class="settings-field-grid">
+                        <div>
+                            <label for="billingCompany" class="form-label">Company / Department</label>
+                            <input type="text" class="form-control" id="billingCompany" placeholder="Research Operations">
+                        </div>
+                        <div>
+                            <label for="billingVat" class="form-label">VAT / Tax ID <span class="label-optional">Optional</span></label>
+                            <input type="text" class="form-control" id="billingVat" placeholder="EU123456789">
+                        </div>
+                        <div>
+                            <label for="billingAddress1" class="form-label">Address line 1</label>
+                            <input type="text" class="form-control" id="billingAddress1" required aria-required="true">
+                        </div>
+                        <div>
+                            <label for="billingAddress2" class="form-label">Address line 2 <span class="label-optional">Optional</span></label>
+                            <input type="text" class="form-control" id="billingAddress2">
+                        </div>
+                        <div>
+                            <label for="billingCity" class="form-label">City</label>
+                            <input type="text" class="form-control" id="billingCity" required aria-required="true">
+                        </div>
+                        <div>
+                            <label for="billingState" class="form-label">State / Region</label>
+                            <input type="text" class="form-control" id="billingState">
+                        </div>
+                        <div>
+                            <label for="billingPostal" class="form-label">Postal code</label>
+                            <input type="text" class="form-control" id="billingPostal" required aria-required="true">
+                        </div>
+                        <div>
+                            <label for="billingCountry" class="form-label">Country</label>
+                            <select class="form-select" id="billingCountry" required aria-required="true">
+                                <option value="">Select country</option>
+                                <option value="US">United States</option>
+                                <option value="UK">United Kingdom</option>
+                                <option value="CA">Canada</option>
+                                <option value="FR">France</option>
+                                <option value="DE">Germany</option>
+                                <option value="SG">Singapore</option>
+                                <option value="AU">Australia</option>
+                                <option value="JP">Japan</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary" id="billingSaveBtn"><i class="fas fa-circle-check me-1"></i>Save billing profile</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="settings-card" aria-labelledby="devicesHeading">
+                <header>
+                    <span class="section-label">Sessions</span>
+                    <h2 id="devicesHeading" class="mb-0">Authorized devices</h2>
+                    <p>Revoke browsers and machines with one click.</p>
+                </header>
+                <div class="device-list" id="authorizedDevices"></div>
+            </section>
+
+            <section class="settings-card" aria-labelledby="dangerZoneHeading">
+                <header>
+                    <span class="section-label">Danger zone</span>
+                    <h2 id="dangerZoneHeading" class="mb-0">Deactivate or delete account</h2>
+                    <p>Proceed with caution - these actions impact your entire workspace.</p>
+                </header>
+                <div class="danger-zone">
+                    <h3><i class="fas fa-triangle-exclamation me-2"></i>Irreversible actions</h3>
+                    <p class="mb-0">Deactivation pauses access; deletion removes data permanently. Enterprise contracts require confirmation.</p>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <button class="btn btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deactivateAccountModal">Request deactivation</button>
+                    <button class="btn btn-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">Delete account</button>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<!-- Two Factor Modal -->
+<div class="modal fade" id="twoFactorModal" tabindex="-1" aria-labelledby="twoFactorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="twoFactorModalLabel">Set up two-factor authentication</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <ol class="mb-3">
+                    <li>Open your authenticator app (1Password, Authy, Google Authenticator, etc.).</li>
+                    <li>Scan the QR code shown or manually enter the secret displayed.</li>
+                    <li>Enter the generated 6-digit code to finalise setup. Hardware keys arrive later this quarter.</li>
+                </ol>
+                <div class="qr-placeholder">
+                    QR provisioning will appear here the moment MFA is fully released.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Billing Assist Modal -->
+<div class="modal fade" id="billingAssistModal" tabindex="-1" aria-labelledby="billingAssistModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="billingAssistModalLabel">Manage billing</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">We're finishing the self-service billing portal. For upgrades, invoices, or PO processing, email <a href="mailto:billing@researchhub.pro">billing@researchhub.pro</a>.</p>
+                <p class="mb-0">Enterprise customers can also speak with their success manager or use the dedicated phone line.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Understood</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Shared Deactivate/Delete Modals -->
+<div class="modal fade" id="deactivateAccountModal" tabindex="-1" aria-labelledby="deactivateAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deactivateAccountModalLabel">Deactivate account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="danger-zone">
+                    <h3><i class="fas fa-circle-exclamation me-2"></i>Heads-up</h3>
+                    <p class="mb-0">Deactivation pauses access for all users tied to your seat. Data retention follows your current plan.</p>
+                </div>
+                <p class="mt-3 mb-0">Email <a href="mailto:success@researchhub.pro">success@researchhub.pro</a> and we'll confirm within minutes.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-outline-danger" id="settingsDeactivateConfirm">Request manual deactivation</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteAccountModalLabel">Delete account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="danger-zone">
+                    <h3><i class="fas fa-skull-crossbones me-2"></i>This is permanent</h3>
+                    <p class="mb-0">Deleting wipes projects, collections, and audit trails. Enterprise contracts require written confirmation.</p>
+                </div>
+                <p class="mt-3">We'll coordinate secure deletion within 24 hours of your request.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="settingsDeleteConfirm"><i class="fas fa-shield-exclamation me-1"></i>Contact support</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const STORAGE_KEYS = {
+        notifications: 'settings-notifications',
+        appearance: 'settings-appearance',
+        language: 'settings-language',
+        timezone: 'settings-timezone',
+        twoFactor: 'settings-twofactor-enabled',
+        phone: 'settings-phone',
+        billing: 'settings-billing-profile',
+        signIns: 'settings-signin-history'
+    };
+
+    const els = {
+        authRequired: document.getElementById('settingsAuthRequired'),
+        loading: document.getElementById('settingsLoading'),
+        shell: document.getElementById('settingsShell'),
+        generalForm: document.getElementById('generalSettingsForm'),
+        generalSaveBtn: document.getElementById('generalSaveBtn'),
+        avatar: document.getElementById('settingsAvatar'),
+        avatarImg: document.getElementById('settingsAvatarImage'),
+        avatarFallback: document.getElementById('settingsAvatarFallback'),
+        avatarBtn: document.getElementById('settingsAvatarBtn'),
+        avatarInput: document.getElementById('settingsAvatarInput'),
+        passwordForm: document.getElementById('passwordSettingsForm'),
+        passwordSaveBtn: document.getElementById('passwordSaveBtn'),
+        passwordLastLogin: document.getElementById('passwordLastLogin'),
+        twoFactorToggle: document.getElementById('twoFactorToggle'),
+        twoFactorStatus: document.getElementById('twoFactorStatusText'),
+        twoFactorInstructions: document.getElementById('twoFactorInstructions'),
+        twoFactorSecret: document.getElementById('twoFactorSecret'),
+        signInHistoryBody: document.getElementById('signInHistoryBody'),
+        notificationTable: document.getElementById('notificationTable'),
+        appearanceForm: document.getElementById('appearanceForm'),
+        appearanceTheme: document.getElementById('appearanceThemeSelect'),
+        languageSelect: document.getElementById('languageSelect'),
+        timezoneSelect: document.getElementById('timezoneSelect'),
+        appearanceResetBtn: document.getElementById('appearanceResetBtn'),
+        dataExportBtn: document.getElementById('dataExportBtn'),
+        billingForm: document.getElementById('billingForm'),
+        billingSaveBtn: document.getElementById('billingSaveBtn'),
+        authorizedDevices: document.getElementById('authorizedDevices'),
+        billingAssistModal: document.getElementById('billingAssistModal'),
+        settingsDeactivateConfirm: document.getElementById('settingsDeactivateConfirm'),
+        settingsDeleteConfirm: document.getElementById('settingsDeleteConfirm')
+    };
+
+    const state = {
+        user: null,
+        notificationPrefs: loadJSON(STORAGE_KEYS.notifications, {
+            'project-updates': { email: true, push: true, desktop: false },
+            'collection-changes': { email: true, push: false, desktop: false },
+            'export-ready': { email: true, push: true, desktop: true },
+            'announcements': { email: true, push: false, desktop: false }
+        }),
+        twoFactorEnabled: localStorage.getItem(STORAGE_KEYS.twoFactor) === 'true'
+    };
+
+    const INTEGRATION_CONFIG = {
+        perplexity: {
+            field: 'perplexity_api_key',
+            label: 'Perplexity',
+            requiresValidation: true,
+            icon: 'fas fa-sparkles',
+            help: 'Perplexity powers premium neural search, reranking, and live models. Keys are verified against the models endpoint before being encrypted.',
+            capabilities: ['search', 'ai-assist']
+        },
+        openai: {
+            field: 'openai_api_key',
+            label: 'OpenAI',
+            icon: 'fas fa-brain',
+            help: 'Unlock GPT-4, GPT-4o, embeddings, and custom assistants for summarization, insight generation, and dataset enrichment.',
+            capabilities: ['ai-models']
+        },
+        anthropic: {
+            field: 'anthropic_api_key',
+            label: 'Anthropic',
+            icon: 'fas fa-feather',
+            help: 'Route long-form analysis and safety-focused workflows through Claude models. Validation checks the model registry.',
+            capabilities: ['ai-models']
+        },
+        serpapi: {
+            field: 'serpapi_api_key',
+            label: 'SerpAPI',
+            icon: 'fas fa-globe',
+            help: 'Augment ResearchHub searches with precise Google, news, and map enrichment. We sync quota details on every save.',
+            capabilities: ['enrichment', 'search']
+        }
+    };
+
+    const integrationRegistry = {};
+
+    function loadJSON(key, fallback) {
+        try {
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : fallback;
+        } catch (error) {
+            console.warn('Failed to parse localStorage key', key, error);
+            return fallback;
+        }
+    }
+
+    function saveJSON(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function rebuildIntegrationRegistry() {
+        Object.keys(integrationRegistry).forEach(key => delete integrationRegistry[key]);
+
+        document.querySelectorAll('.integration-card').forEach(card => {
+            const provider = card.getAttribute('data-provider');
+            if (!provider) {
+                return;
+            }
+
+            const metaFields = {};
+            card.querySelectorAll('[data-meta]').forEach(element => {
+                const metaKey = element.getAttribute('data-meta');
+                if (!metaKey) return;
+                metaFields[metaKey] = element;
+            });
+
+            integrationRegistry[provider] = {
+                card,
+                field: card.getAttribute('data-field'),
+                form: card.querySelector('.integration-form'),
+                input: card.querySelector('.integration-input'),
+                saveBtn: card.querySelector('.integration-save'),
+                removeBtn: card.querySelector('.integration-remove'),
+                visibilityBtn: card.querySelector('.integration-visibility'),
+                statusBadge: card.querySelector('.integration-status'),
+                lastValidated: metaFields['last-validated'] || null,
+                metaFields,
+                logList: card.querySelector('.integration-log'),
+                activityBadge: card.querySelector('[data-meta="activity-count"]'),
+                helpBtn: card.querySelector('.integration-help'),
+                capabilityBadges: card.querySelectorAll('.integration-capability')
+            };
+        });
+    }
+
+    function bindEvents() {
+        if (els.avatarBtn && els.avatarInput) {
+            els.avatarBtn.addEventListener('click', () => els.avatarInput.click());
+            els.avatarInput.addEventListener('change', handleAvatarPreview);
+        }
+
+        if (els.generalForm) {
+            els.generalForm.addEventListener('submit', submitGeneralForm);
+        }
+
+        if (els.passwordForm) {
+            els.passwordForm.addEventListener('submit', submitPasswordForm);
+        }
+
+        if (els.twoFactorToggle) {
+            els.twoFactorToggle.addEventListener('change', handleTwoFactorToggle);
+        }
+
+        Object.entries(integrationRegistry).forEach(([provider, nodes]) => {
+            if (nodes.form) {
+                nodes.form.addEventListener('submit', (event) => submitIntegrationForm(event, provider));
+            }
+            if (nodes.removeBtn) {
+                nodes.removeBtn.addEventListener('click', () => removeIntegrationKey(provider));
+            }
+            if (nodes.visibilityBtn) {
+                nodes.visibilityBtn.addEventListener('click', () => toggleIntegrationVisibility(provider));
+            }
+            if (nodes.helpBtn) {
+                nodes.helpBtn.addEventListener('click', () => showIntegrationHelp(provider));
+            }
+        });
+
+        if (els.notificationTable) {
+            els.notificationTable.querySelectorAll('input[type="checkbox"]').forEach(input => {
+                input.addEventListener('change', handleNotificationToggle);
+            });
+        }
+
+        if (els.appearanceForm) {
+            els.appearanceForm.addEventListener('submit', submitAppearanceForm);
+        }
+
+        if (els.appearanceTheme) {
+            els.appearanceTheme.addEventListener('change', (event) => {
+                applyTheme(event.target.value);
+                const appearancePrefs = loadJSON(STORAGE_KEYS.appearance, {});
+                appearancePrefs.theme = event.target.value;
+                saveJSON(STORAGE_KEYS.appearance, appearancePrefs);
+            });
+        }
+
+        if (els.appearanceResetBtn) {
+            els.appearanceResetBtn.addEventListener('click', resetAppearancePrefs);
+        }
+
+        if (els.dataExportBtn) {
+            els.dataExportBtn.addEventListener('click', () => {
+                showAlert('Data exports complete within 72 hours. We will notify you when it is ready.', 'info');
+            });
+        }
+
+        if (els.billingForm) {
+            els.billingForm.addEventListener('submit', submitBillingForm);
+        }
+
+        document.querySelectorAll('[data-oauth-provider]').forEach(button => {
+            button.addEventListener('click', () => {
+                const provider = button.getAttribute('data-oauth-provider');
+                showAlert(`OAuth connection for ${provider} is coming soon. Contact support to enable it today.`, 'info');
+            });
+        });
+
+        if (els.settingsDeactivateConfirm) {
+            els.settingsDeactivateConfirm.addEventListener('click', () => {
+                showAlert('Thanks for the heads-up. Our team will coordinate deactivation shortly.', 'info');
+            });
+        }
+
+        if (els.settingsDeleteConfirm) {
+            els.settingsDeleteConfirm.addEventListener('click', () => {
+                showAlert('Deletion requests are handled manually today. Expect a follow-up within 24 hours.', 'warning');
+            });
+        }
+    }
+
+    function handleAvatarPreview(event) {
+        const file = event.target.files?.[0];
+        if (!file) {
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            showAlert('Please choose a valid image file.', 'warning');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            els.avatarImg.src = reader.result;
+            els.avatar.classList.add('has-image');
+            showAlert('Avatar updated locally. Cloud sync arrives soon.', 'info');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    async function submitGeneralForm(event) {
+        event.preventDefault();
+        if (!els.generalSaveBtn) return;
+
+        const payload = {
+            first_name: document.getElementById('settingsFirstName').value.trim(),
+            last_name: document.getElementById('settingsLastName').value.trim(),
+            organization: document.getElementById('settingsOrganization').value.trim(),
+            bio: document.getElementById('settingsBio').value.trim()
+        };
+        const phoneValue = document.getElementById('settingsPhone').value.trim();
+
+        els.generalSaveBtn.disabled = true;
+        els.generalSaveBtn.querySelector('.default-label').classList.add('d-none');
+        els.generalSaveBtn.querySelector('.spinner-label').classList.remove('d-none');
+
+        try {
+            const response = await api.put('/auth/me', payload);
+            const user = response.user || response;
+            persistUserState(user);
+            populateGeneral(user);
+            if (phoneValue) {
+                localStorage.setItem(STORAGE_KEYS.phone, phoneValue);
+            } else {
+                localStorage.removeItem(STORAGE_KEYS.phone);
+            }
+            showAlert('Profile updated successfully.', 'success');
+        } catch (error) {
+            console.error('Profile update failed:', error);
+            showAlert(error.message || 'Failed to update profile.', 'error');
+        } finally {
+            els.generalSaveBtn.disabled = false;
+            els.generalSaveBtn.querySelector('.default-label').classList.remove('d-none');
+            els.generalSaveBtn.querySelector('.spinner-label').classList.add('d-none');
+        }
+    }
+
+    async function submitPasswordForm(event) {
+        event.preventDefault();
+
+        const current = document.getElementById('passwordCurrent').value;
+        const next = document.getElementById('passwordNew').value;
+        const confirm = document.getElementById('passwordConfirm').value;
+
+        if (next !== confirm) {
+            showAlert('New passwords do not match.', 'warning');
+            return;
+        }
+        if (next.length < 8) {
+            showAlert('Password must be at least 8 characters long.', 'warning');
+            return;
+        }
+
+        els.passwordSaveBtn.disabled = true;
+        els.passwordSaveBtn.querySelector('.default-label').classList.add('d-none');
+        els.passwordSaveBtn.querySelector('.spinner-label').classList.remove('d-none');
+
+        try {
+            await api.post('/auth/change-password', {
+                current_password: current,
+                new_password: next
+            });
+            showAlert('Password updated. Use the new credentials next sign-in.', 'success');
+            els.passwordForm.reset();
+        } catch (error) {
+            console.error('Password change failed:', error);
+            const message = error instanceof ApiError ? error.message : 'Failed to change password.';
+            showAlert(message, error.status === 401 ? 'warning' : 'error');
+        } finally {
+            els.passwordSaveBtn.disabled = false;
+            els.passwordSaveBtn.querySelector('.default-label').classList.remove('d-none');
+            els.passwordSaveBtn.querySelector('.spinner-label').classList.add('d-none');
+        }
+    }
+
+    function handleTwoFactorToggle(event) {
+        const enabled = event.target.checked;
+        if (enabled) {
+            const modalEl = document.getElementById('twoFactorModal');
+            if (modalEl && window.bootstrap?.Modal) {
+                const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            }
+            state.twoFactorEnabled = true;
+            localStorage.setItem(STORAGE_KEYS.twoFactor, 'true');
+            els.twoFactorStatus.textContent = 'Enabled (manual verification)';
+            els.twoFactorInstructions.hidden = false;
+        } else {
+            state.twoFactorEnabled = false;
+            localStorage.removeItem(STORAGE_KEYS.twoFactor);
+            els.twoFactorStatus.textContent = 'Disabled';
+            els.twoFactorInstructions.hidden = true;
+        }
+    }
+
+    function formatProviderLabel(provider) {
+        const config = INTEGRATION_CONFIG[provider];
+        if (config?.label) {
+            return config.label;
+        }
+        if (!provider) {
+            return 'Integration';
+        }
+        return provider.charAt(0).toUpperCase() + provider.slice(1);
+    }
+
+    function extractIntegrationStatus(provider, payload) {
+        if (!payload) {
+            return null;
+        }
+        if (provider === 'perplexity' && payload.perplexity_integration) {
+            return payload.perplexity_integration;
+        }
+        if (payload.integration_updates?.[provider]) {
+            return payload.integration_updates[provider];
+        }
+        if (payload.user?.integrations?.[provider]) {
+            return payload.user.integrations[provider];
+        }
+        return null;
+    }
+
+    function extractIntegrationEvents(provider, payload) {
+        if (!payload) {
+            return null;
+        }
+        if (payload.integration_events?.[provider]) {
+            return payload.integration_events[provider];
+        }
+        if (payload.user?.integration_events?.[provider]) {
+            return payload.user.integration_events[provider];
+        }
+        return null;
+    }
+
+    function updateIntegrationStatus(provider, status) {
+        const nodes = integrationRegistry[provider];
+        if (!nodes) return;
+
+        const connected = status?.connected;
+        if (nodes.statusBadge) {
+            nodes.statusBadge.textContent = connected ? 'Status: Connected' : 'Status: Not linked';
+            nodes.statusBadge.className = `badge ${connected ? 'badge-positive' : 'badge-neutral'} integration-status`;
+        }
+
+        if (nodes.lastValidated) {
+            const timestamp = status?.last_validated_at;
+            nodes.lastValidated.textContent = timestamp ? formatRelativeTime(timestamp) : 'Never';
+        }
+
+        updateIntegrationMetadata(provider, status);
+        applyIntegrationCapabilityBadges(provider, status);
+    }
+
+    function updateIntegrationMetadata(provider, status) {
+        const nodes = integrationRegistry[provider];
+        if (!nodes?.metaFields) return;
+
+        const metadata = status?.metadata || {};
+        Object.entries(nodes.metaFields).forEach(([key, element]) => {
+            if (!element || key === 'last-validated') {
+                return;
+            }
+
+            const value = metadata[key] ?? status?.[key];
+            if (value === undefined || value === null || value === '') {
+                element.textContent = '';
+                element.classList.add('d-none');
+            } else {
+                element.textContent = formatMetadataValue(key, value);
+                element.classList.remove('d-none');
+            }
+        });
+    }
+
+    function formatMetadataValue(key, value) {
+        if (value === undefined || value === null) {
+            return '';
+        }
+        if (key === 'plan') {
+            return `Plan: ${value}`;
+        }
+        if (key === 'requests_left') {
+            return `Quota left: ${value}`;
+        }
+        if (key === 'model_count' || key === 'models_detected') {
+            return `${value} models`; 
+        }
+        return String(value);
+    }
+
+    function applyIntegrationCapabilityBadges(provider, status) {
+        const nodes = integrationRegistry[provider];
+        if (!nodes?.capabilityBadges) return;
+        const connected = status?.connected;
+        nodes.capabilityBadges.forEach(badge => {
+            if (connected) {
+                badge.classList.remove('d-none');
+            } else {
+                badge.classList.add('d-none');
+            }
+        });
+    }
+
+    function updateIntegrationEvents(provider, events) {
+        const nodes = integrationRegistry[provider];
+        if (!nodes?.logList) return;
+
+        const list = nodes.logList;
+        const timeline = Array.isArray(events) ? events.slice(0, 6) : [];
+        if (!timeline.length) {
+            list.innerHTML = '<li class="text-muted small">No activity logged yet.</li>';
+        } else {
+            list.innerHTML = timeline.map(renderIntegrationEvent).join('');
+        }
+
+        if (nodes.activityBadge) {
+            const count = Array.isArray(events) ? events.length : 0;
+            nodes.activityBadge.textContent = count ? `${count} event${count === 1 ? '' : 's'}` : '0 events';
+        }
+    }
+
+    function renderIntegrationEvent(event) {
+        const created = event?.created_at ? formatRelativeTime(event.created_at) : 'moments ago';
+        const status = event?.status || 'info';
+        const icon = status === 'success' ? 'fa-circle-check' : status === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info';
+        const message = event?.message || 'Activity recorded';
+        return `
+            <li class="integration-log-item ${status}">
+                <span class="integration-log-icon"><i class="fas ${icon}"></i></span>
+                <div>
+                    <div class="integration-log-message">${message}</div>
+                    <div class="integration-log-meta">${created}</div>
+                </div>
+            </li>
+        `;
+    }
+
+    function persistUserState(user) {
+        if (!user) return;
+        state.user = user;
+        try {
+            if (typeof window.setStoredUser === 'function') {
+                window.setStoredUser(user);
+            } else {
+                localStorage.setItem('user', JSON.stringify(user));
+            }
+        } catch (error) {
+            console.warn('Failed to persist user state', error);
+        }
+    }
+
+    function notifyIntegrationChange(provider, status, options = {}) {
+        const label = formatProviderLabel(provider);
+        const connected = status?.connected;
+
+        if (provider === 'perplexity') {
+            if (options.removed || status?.status === 'removed' || !connected) {
+                showAlert(`${label} key removed.`, 'info');
+                return;
+            }
+            if (status?.just_linked) {
+                showAlert(`${label} key verified and linked to your workspace.`, 'success');
+            } else if (connected) {
+                showAlert(`${label} key refreshed.`, 'info');
+            }
+            return;
+        }
+
+        if (options.removed || !connected) {
+            showAlert(`${label} key removed.`, 'info');
+        } else if (connected) {
+            showAlert(`${label} key saved.`, 'success');
+        }
+    }
+
+    async function submitIntegrationForm(event, provider) {
+        event.preventDefault();
+        const nodes = integrationRegistry[provider];
+        if (!nodes) return;
+
+        const { input, saveBtn, field } = nodes;
+        if (!input || !saveBtn || !field) return;
+
+        const keyValue = input.value.trim();
+        if (!keyValue) {
+            showAlert(`Enter a ${formatProviderLabel(provider)} key before saving.`, 'warning');
+            return;
+        }
+
+        saveBtn.disabled = true;
+
+        try {
+            const payload = {};
+            payload[field] = keyValue;
+            const response = await api.put('/auth/me', payload);
+
+            if (response.user) {
+                persistUserState(response.user);
+            }
+
+            const status = extractIntegrationStatus(provider, response) || state.user?.integrations?.[provider] || { connected: true };
+            const events = extractIntegrationEvents(provider, response) || state.user?.integration_events?.[provider] || [];
+
+            if (state.user) {
+                state.user.integrations = state.user.integrations || {};
+                state.user.integrations[provider] = { ...state.user.integrations[provider], ...status };
+                state.user.integration_events = state.user.integration_events || {};
+                state.user.integration_events[provider] = events;
+            }
+            updateIntegrationStatus(provider, status);
+            updateIntegrationEvents(provider, events);
+            notifyIntegrationChange(provider, status);
+        } catch (error) {
+            console.error(`${provider} key update failed:`, error);
+            showAlert(error.message || `Unable to update ${formatProviderLabel(provider)} key.`, 'error');
+        } finally {
+            saveBtn.disabled = false;
+        }
+    }
+
+    async function removeIntegrationKey(provider) {
+        const nodes = integrationRegistry[provider];
+        if (!nodes) return;
+
+        const { field, removeBtn, input } = nodes;
+        if (!field || !removeBtn) return;
+
+        removeBtn.disabled = true;
+
+        try {
+            const payload = {};
+            payload[field] = null;
+            const response = await api.put('/auth/me', payload);
+
+            if (input) {
+                input.value = '';
+            }
+
+            if (response.user) {
+                persistUserState(response.user);
+            }
+            const status = extractIntegrationStatus(provider, response) || state.user?.integrations?.[provider] || { connected: false, status: 'not_configured' };
+            const events = extractIntegrationEvents(provider, response) || state.user?.integration_events?.[provider] || [];
+            if (state.user) {
+                state.user.integrations = state.user.integrations || {};
+                state.user.integrations[provider] = { ...state.user.integrations[provider], ...status };
+                state.user.integration_events = state.user.integration_events || {};
+                state.user.integration_events[provider] = events;
+            }
+            updateIntegrationStatus(provider, status);
+            updateIntegrationEvents(provider, events);
+            notifyIntegrationChange(provider, status, { removed: true });
+        } catch (error) {
+            console.error(`${provider} key removal failed:`, error);
+            showAlert(error.message || `Unable to remove ${formatProviderLabel(provider)} key.`, 'error');
+        } finally {
+            removeBtn.disabled = false;
+        }
+    }
+
+    function toggleIntegrationVisibility(provider) {
+        const nodes = integrationRegistry[provider];
+        if (!nodes?.input || !nodes.visibilityBtn) return;
+
+        const isPassword = nodes.input.getAttribute('type') === 'password';
+        nodes.input.setAttribute('type', isPassword ? 'text' : 'password');
+        nodes.visibilityBtn.innerHTML = isPassword ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+    }
+
+    function showIntegrationHelp(provider) {
+        const config = INTEGRATION_CONFIG[provider] || {};
+        const label = formatProviderLabel(provider);
+        const message = config.help || `${label} integration assistance is coming soon.`;
+        showAlert(`${label}: ${message}`, 'info');
+    }
+
+    function handleNotificationToggle(event) {
+        const group = event.target.getAttribute('data-pref-group');
+        const channel = event.target.getAttribute('data-pref-channel');
+        const checked = event.target.checked;
+        if (!state.notificationPrefs[group]) {
+            state.notificationPrefs[group] = {};
+        }
+        state.notificationPrefs[group][channel] = checked;
+        saveJSON(STORAGE_KEYS.notifications, state.notificationPrefs);
+    }
+
+    function submitAppearanceForm(event) {
+        event.preventDefault();
+        const appearancePrefs = {
+            theme: els.appearanceTheme.value,
+            language: els.languageSelect.value,
+            timezone: els.timezoneSelect.value
+        };
+        saveJSON(STORAGE_KEYS.appearance, appearancePrefs);
+        localStorage.setItem(STORAGE_KEYS.language, appearancePrefs.language);
+        localStorage.setItem(STORAGE_KEYS.timezone, appearancePrefs.timezone);
+        applyTheme(appearancePrefs.theme);
+        showAlert('Workspace preferences saved.', 'success');
+    }
+
+    function resetAppearancePrefs() {
+        localStorage.removeItem(STORAGE_KEYS.appearance);
+        localStorage.removeItem(STORAGE_KEYS.language);
+        localStorage.removeItem(STORAGE_KEYS.timezone);
+        els.appearanceTheme.value = 'dark';
+        els.languageSelect.value = 'en-US';
+        els.timezoneSelect.value = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York';
+        applyTheme('dark');
+        showAlert('Appearance reset to defaults.', 'info');
+    }
+
+    function submitBillingForm(event) {
+        event.preventDefault();
+        const formData = {
+            company: document.getElementById('billingCompany').value.trim(),
+            vat: document.getElementById('billingVat').value.trim(),
+            address1: document.getElementById('billingAddress1').value.trim(),
+            address2: document.getElementById('billingAddress2').value.trim(),
+            city: document.getElementById('billingCity').value.trim(),
+            state: document.getElementById('billingState').value.trim(),
+            postal: document.getElementById('billingPostal').value.trim(),
+            country: document.getElementById('billingCountry').value
+        };
+        saveJSON(STORAGE_KEYS.billing, formData);
+        showAlert('Billing profile saved locally. Billing portal launches soon.', 'info');
+    }
+
+    function populateGeneral(user) {
+        document.getElementById('settingsFirstName').value = user.first_name || '';
+        document.getElementById('settingsLastName').value = user.last_name || '';
+        document.getElementById('settingsUsername').value = user.username || '';
+        document.getElementById('settingsEmail').value = user.email || '';
+        document.getElementById('settingsOrganization').value = user.organization || '';
+        document.getElementById('settingsBio').value = user.bio || '';
+
+        const phoneValue = user.phone_number || user.phone || localStorage.getItem(STORAGE_KEYS.phone) || '';
+        document.getElementById('settingsPhone').value = phoneValue;
+
+        const initials = [user.first_name, user.last_name].filter(Boolean).map(name => name[0]?.toUpperCase()).join('') || (user.username?.slice(0, 2) || 'RH').toUpperCase();
+        els.avatarFallback.textContent = initials;
+        if (user.avatar_url) {
+            els.avatarImg.src = user.avatar_url;
+            els.avatar.classList.add('has-image');
+        } else {
+            els.avatar.classList.remove('has-image');
+        }
+    }
+
+    function populateSecurity(user) {
+        if (els.passwordLastLogin) {
+            els.passwordLastLogin.textContent = `Last login ${user.last_login_at ? formatRelativeTime(user.last_login_at) : 'recently'}`;
+        }
+
+        els.twoFactorToggle.checked = state.twoFactorEnabled;
+        els.twoFactorStatus.textContent = state.twoFactorEnabled ? 'Enabled (manual verification)' : 'Disabled';
+        els.twoFactorInstructions.hidden = !state.twoFactorEnabled;
+        if (els.twoFactorSecret) {
+            const identifier = (user.id || user.username || '0000').toString().slice(-4).toUpperCase();
+            els.twoFactorSecret.textContent = `RH-PRO-${identifier}`;
+        }
+
+        populateSignInHistory(user);
+    }
+
+    function populateSignInHistory(user) {
+        const history = buildSignInHistory(user);
+        els.signInHistoryBody.innerHTML = history.map(entry => `
+            <tr>
+                <td>${entry.device}</td>
+                <td>${entry.location}</td>
+                <td>${entry.ip}</td>
+                <td>${entry.lastSeen}</td>
+                <td><span class="badge ${entry.status === 'Active' ? 'badge-positive' : 'badge-neutral'}">${entry.status}</span></td>
+            </tr>
+        `).join('');
+        populateAuthorizedDevices(history);
+    }
+
+    function buildSignInHistory(user) {
+        const storedHistory = loadJSON(STORAGE_KEYS.signIns, []);
+        const now = new Date();
+        const tz = Intl.DateTimeFormat('en-US', { timeZoneName: 'short' }).format(now);
+        const currentEntry = {
+            device: 'This device',
+            location: `Approx. ${tz}`,
+            ip: 'n/a',
+            lastSeen: user.last_login_at ? formatRelativeTime(user.last_login_at) : 'just now',
+            status: 'Active'
+        };
+
+        if (!storedHistory.length) {
+            const fallback = [
+                {
+                    device: 'MacBook Pro - Chrome',
+                    location: 'San Francisco, US',
+                    ip: '198.51.100.5',
+                    lastSeen: formatRelativeTime(new Date(Date.now() - 86400000).toISOString()),
+                    status: 'Signed out'
+                },
+                {
+                    device: 'iPad Pro - Safari',
+                    location: 'New York, US',
+                    ip: '203.0.113.17',
+                    lastSeen: formatRelativeTime(new Date(Date.now() - 172800000).toISOString()),
+                    status: 'Signed out'
+                }
+            ];
+            saveJSON(STORAGE_KEYS.signIns, fallback);
+            return [currentEntry, ...fallback];
+        }
+
+        return [currentEntry, ...storedHistory];
+    }
+
+    function populateAuthorizedDevices(history) {
+        els.authorizedDevices.innerHTML = history.map(entry => `
+            <div class="device-row">
+                <div>
+                    <strong>${entry.device}</strong>
+                    <p class="mb-0 small text-muted">${entry.location} &bull; ${entry.lastSeen}</p>
+                </div>
+                <button class="btn btn-ghost btn-sm" type="button" ${entry.status === 'Active' ? 'disabled' : ''} data-device="${entry.device}">Revoke</button>
+            </div>
+        `).join('');
+
+        els.authorizedDevices.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', () => {
+                if (button.disabled) {
+                    showAlert('You are currently using this session.', 'info');
+                    return;
+                }
+                showAlert('Remote revocation is on the roadmap. For urgent revokes, contact support.', 'info');
+            });
+        });
+    }
+
+    function populateIntegrations(user) {
+        const integrations = user?.integrations || {};
+        Object.keys(integrationRegistry).forEach(provider => {
+            const status = integrations[provider] || { connected: false, last_validated_at: null };
+            updateIntegrationStatus(provider, status);
+        });
+    }
+
+    function populateNotifications() {
+        if (!els.notificationTable) return;
+        els.notificationTable.querySelectorAll('input[type="checkbox"]').forEach(input => {
+            const group = input.getAttribute('data-pref-group');
+            const channel = input.getAttribute('data-pref-channel');
+            input.checked = !!state.notificationPrefs[group]?.[channel];
+        });
+    }
+
+    function populateAppearance() {
+        const appearancePrefs = loadJSON(STORAGE_KEYS.appearance, {});
+        if (appearancePrefs.theme) {
+            els.appearanceTheme.value = appearancePrefs.theme;
+            applyTheme(appearancePrefs.theme);
+        } else {
+            els.appearanceTheme.value = document.body.getAttribute('data-theme') || 'dark';
+        }
+
+        const savedLanguage = localStorage.getItem(STORAGE_KEYS.language) || appearancePrefs.language;
+        if (savedLanguage) {
+            els.languageSelect.value = savedLanguage;
+        }
+
+        const savedTimezone = localStorage.getItem(STORAGE_KEYS.timezone) || appearancePrefs.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (savedTimezone && Array.from(els.timezoneSelect.options).some(option => option.value === savedTimezone)) {
+            els.timezoneSelect.value = savedTimezone;
+        }
+    }
+
+    function populateBilling() {
+        const billing = loadJSON(STORAGE_KEYS.billing, null);
+        if (!billing) {
+            return;
+        }
+        document.getElementById('billingCompany').value = billing.company || '';
+        document.getElementById('billingVat').value = billing.vat || '';
+        document.getElementById('billingAddress1').value = billing.address1 || '';
+        document.getElementById('billingAddress2').value = billing.address2 || '';
+        document.getElementById('billingCity').value = billing.city || '';
+        document.getElementById('billingState').value = billing.state || '';
+        document.getElementById('billingPostal').value = billing.postal || '';
+        document.getElementById('billingCountry').value = billing.country || '';
+    }
+
+    async function loadSettings() {
+        if (!isAuthenticated()) {
+            els.loading.classList.add('d-none');
+            els.authRequired.classList.remove('d-none');
+            return;
+        }
+
+        try {
+            const response = await api.get('/auth/me');
+            const user = response.user || response;
+            persistUserState(user);
+
+            populateGeneral(user);
+            populateSecurity(user);
+            populateIntegrations(user);
+            populateNotifications();
+            populateAppearance();
+            populateBilling();
+
+            els.shell.classList.remove('d-none');
+        } catch (error) {
+            console.error('Failed to load settings:', error);
+            showAlert(error.message || 'Unable to load settings.', 'error');
+        } finally {
+            els.loading.classList.add('d-none');
+        }
+    }
+
+    window.refreshSettings = async function() {
+        els.loading.classList.remove('d-none');
+        els.shell.classList.add('d-none');
+        await loadSettings();
+    };
+
+    function init() {
+        rebuildIntegrationRegistry();
+        bindEvents();
+        loadSettings();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init, { once: true });
+    } else {
+        init();
+    }
+})();
+</script>
+{% endblock %}

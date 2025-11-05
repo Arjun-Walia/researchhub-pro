@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Query Detail - ResearchHub Pro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <span class="section-label">Query detail</span>
+        <h1 id="queryHeading">Loading query…</h1>
+        <p class="page-subtitle" id="querySubtitle">Reopen the result set, export highlights, or add findings to collections.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <a href="/search-history" class="btn btn-ghost"><i class="fas fa-arrow-left"></i> Back to history</a>
+        <button class="btn btn-secondary" type="button" id="queryRefreshBtn"><i class="fas fa-rotate"></i> Refresh</button>
+        <button class="btn btn-primary" type="button" id="queryExportBtn"><i class="fas fa-file-export"></i> Export</button>
+    </div>
+</div>
+
+<div id="queryAuthRequired" class="empty-state fade-up d-none">
+    <div class="empty-illustration"><i class="fas fa-user-lock"></i></div>
+    <h4 class="mb-2">Sign in to view this query</h4>
+    <p class="mb-3 text-muted">Authenticate to revisit saved research results and export evidence packages.</p>
+    <a href="/login" class="btn btn-primary"><i class="fas fa-lock"></i> Sign in</a>
+</div>
+
+<div id="queryLoading" class="empty-state fade-up">
+    <div class="empty-illustration"><i class="fas fa-spinner fa-spin"></i></div>
+    <p class="mb-0 text-muted">Retrieving saved search results…</p>
+</div>
+
+<div id="queryShell" class="d-none">
+    <div class="metric-grid mb-4">
+        <div class="surface-card metric-card">
+            <div class="metric-header">
+                <div>
+                    <span class="section-label">Total results</span>
+                    <div class="metric-value" id="queryTotalResults">0</div>
+                </div>
+                <span class="metric-icon"><i class="fas fa-chart-column"></i></span>
+            </div>
+            <div class="metric-trend" id="queryProjectLabel">Ungrouped query</div>
+        </div>
+        <div class="surface-card metric-card">
+            <div class="metric-header">
+                <div>
+                    <span class="section-label">Execution time</span>
+                    <div class="metric-value" id="queryDuration">0s</div>
+                </div>
+                <span class="metric-icon"><i class="fas fa-bolt"></i></span>
+            </div>
+            <div class="metric-trend">Runtime for this AI-assisted search</div>
+        </div>
+        <div class="surface-card metric-card">
+            <div class="metric-header">
+                <div>
+                    <span class="section-label">Run date</span>
+                    <div class="metric-value" id="queryRunDate">—</div>
+                </div>
+                <span class="metric-icon"><i class="fas fa-clock"></i></span>
+            </div>
+            <div class="metric-trend">Timestamp uses your workspace locale</div>
+        </div>
+        <div class="surface-card metric-card">
+            <div class="metric-header">
+                <div>
+                    <span class="section-label">AI enhancements</span>
+                    <div class="metric-value" id="queryEnhancement">Off</div>
+                </div>
+                <span class="metric-icon"><i class="fas fa-robot"></i></span>
+            </div>
+            <div class="metric-trend" id="queryEnhancementInfo">AI rewrites disabled</div>
+        </div>
+    </div>
+
+    <div class="surface-card mb-4" id="querySummaryCard" hidden>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <span class="section-label">AI summary</span>
+                <h2 class="mb-1">Key insights</h2>
+                <p class="mb-0 text-muted">Highlight generated during the original search run.</p>
+            </div>
+            <span class="badge badge-neutral">Automated</span>
+        </div>
+        <p class="mb-0" id="querySummary"></p>
+    </div>
+
+    <section class="surface-card" aria-labelledby="resultsHeading">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div>
+                <span class="section-label">Results</span>
+                <h2 id="resultsHeading" class="mb-0">Source documents</h2>
+            </div>
+            <div class="action-group">
+                <button class="btn btn-secondary" type="button" id="queryReopenBtn"><i class="fas fa-magnifying-glass-plus"></i> Re-run search</button>
+                <button class="btn btn-secondary" type="button" id="queryAddCollectionBtn"><i class="fas fa-bookmark"></i> Save to collection</button>
+            </div>
+        </div>
+        <div id="queryResultsContainer" class="d-grid gap-3"></div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const queryId = Number('{{ query_id }}');
+    const authRequired = document.getElementById('queryAuthRequired');
+    const loadingState = document.getElementById('queryLoading');
+    const shell = document.getElementById('queryShell');
+    const heading = document.getElementById('queryHeading');
+    const subtitle = document.getElementById('querySubtitle');
+    const totalResults = document.getElementById('queryTotalResults');
+    const duration = document.getElementById('queryDuration');
+    const runDate = document.getElementById('queryRunDate');
+    const projectLabel = document.getElementById('queryProjectLabel');
+    const enhancement = document.getElementById('queryEnhancement');
+    const enhancementInfo = document.getElementById('queryEnhancementInfo');
+    const summaryCard = document.getElementById('querySummaryCard');
+    const summaryBody = document.getElementById('querySummary');
+    const resultsContainer = document.getElementById('queryResultsContainer');
+    const refreshBtn = document.getElementById('queryRefreshBtn');
+    const exportBtn = document.getElementById('queryExportBtn');
+    const reopenBtn = document.getElementById('queryReopenBtn');
+    const addCollectionBtn = document.getElementById('queryAddCollectionBtn');
+    const refreshIcons = (root) => {
+        if (typeof window.refreshIconAccessibility === 'function') {
+            window.refreshIconAccessibility(root || document);
+        }
+    };
+
+    if (!queryId) {
+        showAlert('Invalid query reference.', 'error');
+        return;
+    }
+
+    if (!isAuthenticated()) {
+        loadingState.classList.add('d-none');
+        authRequired.classList.remove('d-none');
+        return;
+    }
+
+    async function loadQuery() {
+        loadingState.classList.remove('d-none');
+        shell.classList.add('d-none');
+
+        try {
+            const data = await api.get(`/research/queries/${queryId}`);
+            const query = data.query;
+            const results = data.results || [];
+
+            heading.textContent = query.query_text;
+            subtitle.textContent = query.enhanced_query
+                ? 'AI-enhanced wording is available below.'
+                : 'Use the controls to export or re-run this search.';
+
+            if (totalResults) {
+                totalResults.textContent = (query.total_results || results.length || 0).toLocaleString();
+            }
+
+            if (duration) {
+                duration.textContent = query.execution_time ? `${query.execution_time.toFixed(2)}s` : '—';
+            }
+
+            if (runDate) {
+                runDate.textContent = query.created_at ? new Date(query.created_at).toLocaleString() : '—';
+            }
+
+            if (projectLabel) {
+                projectLabel.textContent = query.project && query.project.title
+                    ? query.project.title
+                    : 'Not assigned to a project';
+            }
+
+            if (enhancement) {
+                const enhanced = Boolean(query.enhanced_query);
+                enhancement.textContent = enhanced ? 'On' : 'Off';
+                enhancementInfo.textContent = enhanced
+                    ? 'AI rewrites improved retrieval during this run.'
+                    : 'Original query text executed without rewrites.';
+            }
+
+            if (query.summary) {
+                summaryCard.hidden = false;
+                summaryBody.textContent = query.summary;
+            } else {
+                summaryCard.hidden = true;
+                summaryBody.textContent = '';
+            }
+
+            renderResults(results);
+
+            localStorage.setItem('last-viewed-query', JSON.stringify(query));
+
+            loadingState.classList.add('d-none');
+            shell.classList.remove('d-none');
+            refreshIcons(shell);
+        } catch (error) {
+            console.error('Failed to load query detail:', error);
+            loadingState.classList.add('d-none');
+            showAlert(error.message || 'Unable to load query detail.', 'error');
+            authRequired.classList.add('d-none');
+            refreshIcons(document);
+        }
+    }
+
+    function renderResults(results) {
+        if (!results.length) {
+            resultsContainer.innerHTML = `
+                <div class="empty-state py-4">
+                    <div class="empty-illustration"><i class="fas fa-inbox"></i></div>
+                    <h4 class="mb-2">No results stored</h4>
+                    <p class="mb-0 text-muted">Re-run the search to populate the latest sources.</p>
+                </div>
+            `;
+            refreshIcons(resultsContainer);
+            return;
+        }
+
+        resultsContainer.innerHTML = results.map((result, index) => {
+            const confidence = result.relevance_score ? `${(result.relevance_score * 100).toFixed(1)}%` : null;
+            const published = result.published_date ? new Date(result.published_date).toLocaleDateString() : 'Date unavailable';
+            const summary = result.summary || '';
+            const snippet = result.snippet || '';
+
+            return `
+                <article class="surface-card result-card" data-result-id="${result.id}">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <a href="${escapeHtml(result.url)}" target="_blank" rel="noopener" class="fw-semibold">
+                                ${index + 1}. ${escapeHtml(result.title || 'Untitled result')}
+                            </a>
+                        </div>
+                        <span class="badge badge-neutral">${published}</span>
+                    </div>
+                    <div class="result-meta">
+                        <span><i class="fas fa-link"></i> ${escapeHtml(result.url || 'Unavailable')}</span>
+                        ${confidence ? `<span><i class=\"fas fa-signal\"></i> Confidence ${confidence}</span>` : ''}
+                    </div>
+                    ${snippet ? `<p class=\"mb-3\">${escapeHtml(snippet)}</p>` : ''}
+                    ${summary ? `<div class=\"surface-subtle mb-3\"><strong><i class=\"fas fa-robot\"></i> AI summary</strong><p class=\"mb-0\">${escapeHtml(summary)}</p></div>` : ''}
+                    <div class="result-actions">
+                        <a href="${escapeHtml(result.url)}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-up-right-from-square"></i> Open source
+                        </a>
+                        <div class="action-group">
+                            <button class="btn-icon" type="button" onclick="window.copyQueryCitation('${btoa(result.url || '')}')" title="Copy citation">
+                                <i class="fas fa-quote-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </article>
+            `;
+        }).join('');
+        refreshIcons(resultsContainer);
+    }
+
+    function escapeHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = value ?? '';
+        return div.innerHTML;
+    }
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', loadQuery);
+    }
+
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => exportResults(queryId, 'pdf'));
+    }
+
+    if (reopenBtn) {
+        reopenBtn.addEventListener('click', () => {
+            const stored = localStorage.getItem('last-viewed-query');
+            const query = stored ? JSON.parse(stored) : null;
+            const url = new URL('/search', window.location.origin);
+            if (query?.query_text) {
+                url.searchParams.set('prefill', query.query_text);
+            }
+            window.location.href = url.toString();
+        });
+    }
+
+    if (addCollectionBtn) {
+        addCollectionBtn.addEventListener('click', () => {
+            showAlert('Open the Collections page to add these results to a dossier. Quick-save is coming soon.', 'info');
+        });
+    }
+
+    window.copyQueryCitation = function(encodedUrl) {
+        try {
+            const url = atob(encodedUrl || '');
+            if (!url) {
+                throw new Error('Missing URL');
+            }
+            navigator.clipboard.writeText(url).then(() => {
+                showAlert('Source URL copied to clipboard.', 'success');
+            });
+        } catch (error) {
+            console.error('Citation copy failed:', error);
+            showAlert('Unable to copy citation right now.', 'error');
+        }
+    };
+
+    loadQuery();
+    refreshIcons(document);
+})();
+</script>
+{% endblock %}

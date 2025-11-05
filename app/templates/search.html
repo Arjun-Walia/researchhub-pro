@@ -1,0 +1,574 @@
+{% extends "base.html" %}
+
+{% block title %}Search - ResearchHub Pro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <span class="section-label">AI research</span>
+        <h1>Interrogate the world’s knowledge graph</h1>
+        <p class="page-subtitle">Blend neural search, AI summarization, and citation-ready exports for research-grade intelligence.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <a href="/collections" class="btn btn-secondary"><i class="fas fa-layer-group"></i> View collections</a>
+        <a href="/projects" class="btn btn-ghost"><i class="fas fa-diagram-project"></i> Manage projects</a>
+    </div>
+</div>
+
+<div class="feature-metrics-grid u-mb-6" id="searchInsights" aria-live="polite">
+    <article class="metric-card" id="searchEngineCard">
+        <span class="metric-pill"><i class="fas fa-sitemap"></i> Search stack</span>
+        <div class="metric-value" id="searchEngineCount">0</div>
+        <p class="metric-summary" id="searchEngineSummary">Providers connected</p>
+        <ul class="metric-list" id="searchEngineList">
+            <li><i class="fas fa-plug"></i><span>Connect Perplexity to activate semantic retrieval.</span></li>
+        </ul>
+        <p class="metric-footnote" id="searchEngineFootnote">Linking multiple engines blends neural, keyword, and live web coverage.</p>
+    </article>
+    <article class="metric-card" id="searchAutomationCard">
+        <span class="metric-pill"><i class="fas fa-robot"></i> AI automations</span>
+        <div class="metric-value" id="searchAIHeadline">Locked</div>
+        <p class="metric-summary" id="searchAISummary">Connect OpenAI or Anthropic to unlock AI rewrites and summaries.</p>
+        <ul class="metric-list" id="searchAIList">
+            <li><i class="fas fa-pen-nib"></i><span>AI rewrites craft sharper queries.</span></li>
+            <li><i class="fas fa-scroll"></i><span>Summaries condense each source.</span></li>
+            <li><i class="fas fa-shield-check"></i><span>Confidence scoring ranks impact.</span></li>
+        </ul>
+        <p class="metric-footnote">Automation settings sync across devices for consistent research flows.</p>
+    </article>
+    <article class="metric-card" id="searchVelocityCard">
+        <span class="metric-pill"><i class="fas fa-gauge-high"></i> Workflow</span>
+        <div class="metric-value" id="searchSpeedHeadline">Locked</div>
+        <p class="metric-summary" id="searchSpeedSummary">Connect Perplexity to unlock instant semantic search.</p>
+        <ul class="metric-list" id="searchSpeedList">
+            <li><i class="fas fa-sliders"></i><span>Sort by relevance, impact, or recency.</span></li>
+            <li><i class="fas fa-file-export"></i><span>Export citations in one click.</span></li>
+            <li><i class="fas fa-bolt"></i><span>Keyboard shortcuts accelerate triage.</span></li>
+        </ul>
+        <p class="metric-footnote">Tip: Shift + Enter queues a query without triggering submission.</p>
+    </article>
+</div>
+
+<div class="surface-card elevated search-shell">
+    <div id="loginWarning" class="alert alert-warning d-none">
+        <i class="fas fa-lock"></i>
+        <div>
+            <strong>Authentication required.</strong>
+            <p class="mb-0">Sign in to run AI-assisted searches across enterprise data sources.</p>
+        </div>
+    </div>
+
+    <div id="searchCapabilityBanner" class="surface-subtle integration-capability-banner d-none" role="status" aria-live="polite"></div>
+
+    <form id="searchForm" class="d-grid gap-3">
+        <div class="search-bar">
+            <div class="input-append">
+                <input type="text" id="searchQuery" placeholder="Search emerging research, markets, patents..." required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-magnifying-glass"></i>
+                Run search
+            </button>
+        </div>
+
+        <div class="search-options">
+            <div>
+                <label for="numResults" class="form-label">Number of results</label>
+                <select class="form-select" id="numResults">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+            <div>
+                <label for="searchType" class="form-label">Retrieval mode</label>
+                <select class="form-select" id="searchType">
+                    <option value="auto" selected>Smart auto</option>
+                    <option value="keyword">Keyword</option>
+                    <option value="neural">Neural semantic</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">AI assistants</label>
+                <div class="surface-subtle">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="enhanceQuery" checked>
+                        <label class="form-check-label" for="enhanceQuery">Enhance query with AI rewrites</label>
+                    </div>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="includeSummary" checked>
+                        <label class="form-check-label" for="includeSummary">Include AI-generated summaries</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="surface-subtle">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="section-label">Advanced filters</span>
+                <div class="chip-group" id="sortChips">
+                    <button type="button" class="chip active" data-sort="relevance">Relevance</button>
+                    <button type="button" class="chip" data-sort="recent">Most recent</button>
+                    <button type="button" class="chip" data-sort="impact">Highest impact</button>
+                </div>
+            </div>
+            <p class="mb-0 text-muted">Sort results instantly to match the task at hand. Impact uses the AI confidence score.</p>
+        </div>
+    </form>
+
+    <div id="searchLoading" class="empty-state fade-up d-none">
+        <div class="empty-illustration"><i class="fas fa-spinner fa-spin"></i></div>
+        <p class="mb-0 text-muted">Running semantic retrieval across trusted sources...</p>
+    </div>
+
+    <div id="searchResults" class="search-results"></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const token = localStorage.getItem('access_token');
+    const loginWarning = document.getElementById('loginWarning');
+    if (!token && loginWarning) {
+        loginWarning.classList.remove('d-none');
+    }
+
+    function escapeHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = value ?? '';
+        return div.innerHTML;
+    }
+
+    const searchForm = document.getElementById('searchForm');
+    const searchLoading = document.getElementById('searchLoading');
+    const searchResults = document.getElementById('searchResults');
+    const sortChips = document.querySelectorAll('#sortChips .chip');
+    const capabilityBanner = document.getElementById('searchCapabilityBanner');
+    const searchSubmitButton = searchForm?.querySelector('button[type="submit"]');
+    const enhanceCheckbox = document.getElementById('enhanceQuery');
+    const includeSummaryCheckbox = document.getElementById('includeSummary');
+    const insightElements = {
+        root: document.getElementById('searchInsights'),
+        engineCount: document.getElementById('searchEngineCount'),
+        engineSummary: document.getElementById('searchEngineSummary'),
+        engineList: document.getElementById('searchEngineList'),
+        engineFootnote: document.getElementById('searchEngineFootnote'),
+        aiHeadline: document.getElementById('searchAIHeadline'),
+        aiSummary: document.getElementById('searchAISummary'),
+        aiList: document.getElementById('searchAIList'),
+        speedHeadline: document.getElementById('searchSpeedHeadline'),
+        speedSummary: document.getElementById('searchSpeedSummary'),
+        speedList: document.getElementById('searchSpeedList')
+    };
+    const refreshIcons = (root) => {
+        if (typeof window.refreshIconAccessibility === 'function') {
+            window.refreshIconAccessibility(root || document);
+        }
+    };
+    const CAPABILITY_DEFAULTS = {
+        powered_by: [],
+        search_provider: null,
+        ai_model_providers: [],
+        enrichment_providers: [],
+        has_premium_search: false,
+        has_premium_ai: false,
+        has_enrichment: false
+    };
+    let searchCapabilities = { ...CAPABILITY_DEFAULTS };
+    let activeSort = 'relevance';
+    let latestQueryId = null;
+
+    function mergeCapabilities(raw) {
+        const source = raw || {};
+        return {
+            ...CAPABILITY_DEFAULTS,
+            ...source,
+            powered_by: Array.isArray(source.powered_by) ? [...source.powered_by] : [],
+            ai_model_providers: Array.isArray(source.ai_model_providers) ? [...source.ai_model_providers] : [],
+            enrichment_providers: Array.isArray(source.enrichment_providers) ? [...source.enrichment_providers] : []
+        };
+    }
+
+    function applyCapabilityState() {
+        const hasSearch = searchCapabilities.has_premium_search;
+        const hasAI = searchCapabilities.has_premium_ai;
+
+        if (searchSubmitButton) {
+            searchSubmitButton.disabled = !hasSearch;
+            searchSubmitButton.classList.toggle('disabled', !hasSearch);
+            if (!hasSearch) {
+                searchSubmitButton.setAttribute('title', 'Connect Perplexity to enable AI search.');
+            } else {
+                searchSubmitButton.removeAttribute('title');
+            }
+        }
+
+        if (enhanceCheckbox) {
+            enhanceCheckbox.disabled = !hasAI;
+            if (!hasAI) {
+                enhanceCheckbox.checked = false;
+            }
+            const label = document.querySelector('label[for="enhanceQuery"]');
+            if (label) {
+                label.classList.toggle('text-muted', !hasAI);
+                if (!hasAI) {
+                    label.setAttribute('title', 'Link OpenAI or Anthropic to enable AI rewrites.');
+                } else {
+                    label.removeAttribute('title');
+                }
+            }
+        }
+
+        if (includeSummaryCheckbox) {
+            includeSummaryCheckbox.disabled = !hasAI;
+            if (!hasAI) {
+                includeSummaryCheckbox.checked = false;
+            }
+            const label = document.querySelector('label[for="includeSummary"]');
+            if (label) {
+                label.classList.toggle('text-muted', !hasAI);
+                if (!hasAI) {
+                    label.setAttribute('title', 'Link OpenAI or Anthropic to unlock AI summaries.');
+                } else {
+                    label.removeAttribute('title');
+                }
+            }
+        }
+    }
+
+    function updateInsightCards() {
+        if (!insightElements.root) {
+            return;
+        }
+
+        const providers = [];
+        if (searchCapabilities.search_provider) {
+            providers.push({ icon: 'fas fa-magnifying-glass', label: searchCapabilities.search_provider });
+        }
+        searchCapabilities.powered_by.forEach(label => {
+            providers.push({ icon: 'fas fa-diagram-project', label });
+        });
+
+        const uniqueProviders = providers.reduce((acc, provider) => {
+            if (!acc.some(entry => entry.label === provider.label)) {
+                acc.push(provider);
+            }
+            return acc;
+        }, []);
+
+        insightElements.engineCount.textContent = uniqueProviders.length;
+        insightElements.engineSummary.textContent = uniqueProviders.length === 1 ? 'Provider connected' : 'Providers connected';
+        const engineItems = uniqueProviders.length
+            ? uniqueProviders.map(entry => `<li><i class="${entry.icon}"></i><span>${escapeHtml(entry.label)}</span></li>`)
+            : ['<li><i class="fas fa-plug"></i><span>Connect Perplexity to activate semantic retrieval.</span></li>'];
+        insightElements.engineList.innerHTML = engineItems.join('');
+        insightElements.engineFootnote.textContent = uniqueProviders.length
+            ? 'Linked engines blend neural, keyword, and enrichment modes in a single query.'
+            : 'Link at least one engine to unlock premium retrieval quality.';
+
+        const aiReady = searchCapabilities.has_premium_ai;
+        insightElements.aiHeadline.textContent = aiReady ? 'Ready' : 'Locked';
+        insightElements.aiSummary.textContent = aiReady
+            ? 'AI rewrites and summarization will enhance each result set.'
+            : 'Connect OpenAI or Anthropic to unlock AI rewrites and summaries.';
+        const aiItems = [
+            `<li><i class="${aiReady ? 'fas fa-check' : 'fas fa-ban'}"></i><span>AI rewrites ${aiReady ? 'enabled' : 'disabled'}.</span></li>`,
+            `<li><i class="${aiReady ? 'fas fa-check' : 'fas fa-ban'}"></i><span>Summaries ${aiReady ? 'generated automatically' : 'unavailable'}.</span></li>`,
+            '<li><i class="fas fa-shield-check"></i><span>Confidence scoring remains active for every result.</span></li>'
+        ];
+        insightElements.aiList.innerHTML = aiItems.join('');
+
+        const searchReady = searchCapabilities.has_premium_search;
+        insightElements.speedHeadline.textContent = searchReady ? 'Instant' : 'Locked';
+        insightElements.speedSummary.textContent = searchReady
+            ? 'Premium semantic search is ready. Queue queries back-to-back without throttling.'
+            : 'Connect Perplexity to unlock instant semantic search.';
+        const speedItems = [
+            `<li><i class="fas fa-sliders"></i><span>${searchReady ? 'Advanced sorting filters stay responsive.' : 'Sorting presets unlock after connecting your engine.'}</span></li>`,
+            '<li><i class="fas fa-file-export"></i><span>Export citations in one click.</span></li>',
+            `<li><i class="${aiReady ? 'fas fa-robot' : 'fas fa-plug'}"></i><span>${aiReady ? 'AI summaries accelerate source review.' : 'Add an AI provider to summarize sources automatically.'}</span></li>`
+        ];
+        insightElements.speedList.innerHTML = speedItems.join('');
+
+        refreshIcons(insightElements.root);
+    }
+
+    function updateCapabilityBanner(user) {
+        searchCapabilities = mergeCapabilities(user?.integration_capabilities);
+        applyCapabilityState();
+        updateInsightCards();
+
+        if (!capabilityBanner) {
+            return;
+        }
+
+        const providers = [];
+        if (searchCapabilities.search_provider) {
+            providers.push({ icon: 'fas fa-magnifying-glass', label: searchCapabilities.search_provider });
+        }
+        searchCapabilities.ai_model_providers.forEach(name => {
+            providers.push({ icon: 'fas fa-robot', label: name });
+        });
+        searchCapabilities.enrichment_providers.forEach(name => {
+            providers.push({ icon: 'fas fa-globe', label: name });
+        });
+
+        const chips = providers.length
+            ? providers.map(entry => `<span class="chip"><i class="${entry.icon}"></i>${escapeHtml(entry.label)}</span>`).join('')
+            : '<span class="chip text-muted">No engines linked yet</span>';
+
+        const statusConfig = [
+            { active: searchCapabilities.has_premium_search, label: 'AI search' },
+            { active: searchCapabilities.has_premium_ai, label: 'Summaries' },
+            { active: searchCapabilities.has_enrichment, label: 'Web enrichment' }
+        ];
+
+        const statusBadges = statusConfig.map(status => {
+            const icon = status.active ? 'fas fa-check' : 'fas fa-plug';
+            const cls = status.active ? 'badge badge-positive' : 'badge badge-neutral';
+            const text = status.active ? `${status.label} ready` : `${status.label} locked`;
+            return `<span class="${cls}"><i class="${icon}"></i>${text}</span>`;
+        }).join('');
+
+        const gaps = [];
+        if (!searchCapabilities.has_premium_search) {
+            gaps.push('Connect Perplexity to run premium searches');
+        }
+        if (!searchCapabilities.has_premium_ai) {
+            gaps.push('Add OpenAI or Anthropic for AI summaries');
+        }
+        if (!searchCapabilities.has_enrichment) {
+            gaps.push('Link SerpAPI for live web enrichment');
+        }
+        const message = gaps.length
+            ? `${gaps.join(' · ')}. <a href="/settings">Manage integrations</a>.`
+            : 'All search accelerators are active.';
+
+        capabilityBanner.innerHTML = `
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                <div>
+                    <span class="section-label d-block mb-2">Current engines</span>
+                    <div class="chip-group">${chips}</div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">${statusBadges}</div>
+            </div>
+            <p class="text-muted small mb-0 mt-2">${message}</p>
+        `;
+        capabilityBanner.classList.remove('d-none');
+        refreshIcons(capabilityBanner);
+    }
+
+    updateCapabilityBanner(getCurrentUser());
+
+    window.addEventListener('user:updated', (event) => {
+        const updatedUser = event?.detail?.user || getCurrentUser();
+        updateCapabilityBanner(updatedUser);
+    });
+
+    if (!searchForm) {
+        return;
+    }
+
+    sortChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            sortChips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            activeSort = chip.dataset.sort;
+            if (searchResults.dataset.hasResults === 'true') {
+                reorderResults(activeSort);
+            }
+        });
+    });
+
+    searchForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        if (!localStorage.getItem('access_token')) {
+            showAlert('Please login to perform searches', 'warning');
+            return;
+        }
+
+        if (!searchCapabilities.has_premium_search) {
+            showAlert('Connect your Perplexity API key in Settings > Integrations to unlock AI search.', 'warning');
+            return;
+        }
+
+        const query = document.getElementById('searchQuery').value.trim();
+        if (!query) {
+            showAlert('Enter a search query to continue.', 'warning');
+            return;
+        }
+
+    const numResults = parseInt(document.getElementById('numResults').value, 10);
+    const searchType = document.getElementById('searchType').value;
+    const enhanceQuery = !!enhanceCheckbox?.checked;
+    const includeSummary = !!includeSummaryCheckbox?.checked;
+
+        searchResults.innerHTML = '';
+        searchResults.dataset.hasResults = 'false';
+        searchLoading.classList.remove('d-none');
+
+        try {
+            const payload = {
+                query,
+                num_results: numResults,
+                search_type: searchType,
+                enhance_query: enhanceQuery
+            };
+
+            const response = await api.post('/research/search', payload);
+            latestQueryId = response.query_id;
+            displayResults(response, { includeSummary, sort: activeSort });
+        } catch (error) {
+            console.error('Search failed:', error);
+            showAlert(error.message || 'Search failed. Please try again.', 'error');
+        } finally {
+            searchLoading.classList.add('d-none');
+        }
+    });
+
+    function reorderResults(sort) {
+        const cards = Array.from(document.querySelectorAll('.result-card'));
+        const container = document.getElementById('resultCardsContainer');
+        if (!container || !cards.length) {
+            return;
+        }
+
+        const sorted = cards.slice().sort((a, b) => {
+            const scoreA = parseFloat(a.dataset.score || '0');
+            const scoreB = parseFloat(b.dataset.score || '0');
+            const timeA = new Date(a.dataset.published || 0).getTime();
+            const timeB = new Date(b.dataset.published || 0).getTime();
+
+            if (sort === 'recent') {
+                return timeB - timeA;
+            }
+            if (sort === 'impact') {
+                return scoreB - scoreA;
+            }
+            return parseInt(a.dataset.index, 10) - parseInt(b.dataset.index, 10);
+        });
+
+        container.innerHTML = '';
+        sorted.forEach(card => container.appendChild(card));
+    }
+
+    function displayResults(data, options) {
+        if (!data.results || !data.results.length) {
+            searchResults.innerHTML = `
+                <div class="empty-state fade-up">
+                    <div class="empty-illustration"><i class="fas fa-binoculars"></i></div>
+                    <h4 class="mb-2">No results yet</h4>
+                    <p class="mb-0 text-muted">No matches were found for this query. Adjust your filters or try a different angle.</p>
+                </div>
+            `;
+            return;
+        }
+
+        searchResults.dataset.hasResults = 'true';
+        const includeSummary = options.includeSummary;
+        const resultsHeader = `
+            <div class="surface-subtle d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <span class="section-label">Results</span>
+                    <h4 class="mb-0">${data.results.length} sources discovered</h4>
+                    <p class="mb-0 text-muted">Sorted by ${options.sort === 'recent' ? 'publish date' : options.sort === 'impact' ? 'AI confidence' : 'relevance'}.</p>
+                </div>
+                <div class="action-group">
+                    <button class="btn btn-secondary" type="button" onclick="exportResults(${data.query_id})">
+                        <i class="fas fa-file-export"></i> Export all
+                    </button>
+                </div>
+            </div>
+        `;
+
+        const cards = data.results.map((result, index) => {
+            const date = result.published_date ? new Date(result.published_date).toISOString() : '';
+            const displayDate = result.published_date ? new Date(result.published_date).toLocaleDateString() : 'Date unavailable';
+            const score = result.score ? (result.score * 100).toFixed(1) : null;
+            const snippet = result.text ? `${result.text.slice(0, 320)}${result.text.length > 320 ? '…' : ''}` : '';
+
+            return `
+                <div class="surface-card result-card" data-index="${index}" data-score="${score || 0}" data-published="${date}">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <a href="${result.url}" target="_blank" rel="noopener" class="fw-semibold">
+                                ${index + 1}. ${escapeHtml(result.title || 'Untitled result')}
+                            </a>
+                        </div>
+                        <span class="badge badge-neutral">${displayDate}</span>
+                    </div>
+                    <div class="result-meta">
+                        <span><i class="fas fa-link"></i> ${escapeHtml(result.url || 'Unavailable')}</span>
+                        ${score ? `<span><i class="fas fa-signal"></i> Confidence ${score}%</span>` : ''}
+                    </div>
+                    ${snippet ? `<p class="mb-3">${escapeHtml(snippet)}</p>` : ''}
+                    ${includeSummary && result.summary ? `
+                        <div class="surface-subtle mb-3">
+                            <strong><i class="fas fa-robot"></i> AI summary</strong>
+                            <p class="mb-0">${escapeHtml(result.summary)}</p>
+                        </div>
+                    ` : ''}
+                    <div class="result-actions">
+                        <a href="${result.url}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-up-right-from-square"></i> Open source
+                        </a>
+                        <div class="action-group">
+                            <button class="btn-icon" type="button" onclick="addToCollectionPrompt(${result.id || 'null'})" title="Save to collection">
+                                <i class="fas fa-bookmark"></i>
+                            </button>
+                            <button class="btn-icon" type="button" onclick="copyCitation('${btoa(result.url || '')}')" title="Copy citation">
+                                <i class="fas fa-quote-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        searchResults.innerHTML = `
+            ${resultsHeader}
+            <div id="resultCardsContainer" class="d-grid gap-3 mt-3">
+                ${cards}
+            </div>
+        `;
+
+        reorderResults(options.sort);
+        refreshIcons(searchResults);
+    }
+
+    window.exportResults = function(queryId, format = 'pdf') {
+        if (!queryId) {
+            showAlert('Export unavailable for this result set.', 'warning');
+            return;
+        }
+        window.location.href = `/api/v1/export/query/${queryId}?format=${format}`;
+    };
+
+    window.addToCollectionPrompt = function(resultId) {
+        if (!resultId) {
+            showAlert('This source cannot be saved yet.', 'warning');
+            return;
+        }
+        showAlert('Open the collection drawer from the sidebar to save this result.', 'info');
+    };
+
+    window.copyCitation = function(encodedUrl) {
+        try {
+            const url = atob(encodedUrl || '');
+            if (!url) {
+                throw new Error('No URL provided');
+            }
+            navigator.clipboard.writeText(url).then(() => {
+                showAlert('Source URL copied to clipboard.', 'success');
+            });
+        } catch (error) {
+            console.error('Copy failed:', error);
+            showAlert('Unable to copy citation right now.', 'error');
+        }
+    };
+
+    refreshIcons(document);
+});
+</script>
+{% endblock %}

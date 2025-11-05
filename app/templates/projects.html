@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block title %}Projects - ResearchHub Pro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <span class="section-label">Projects</span>
+        <h1>Operational research workspaces</h1>
+        <p class="page-subtitle">Orchestrate intelligence sprints, assign collaborators, and centralize outputs by strategic initiative.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <button class="btn btn-secondary" type="button" onclick="loadProjects()"><i class="fas fa-rotate"></i> Refresh</button>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+            <i class="fas fa-plus"></i> New project
+        </button>
+    </div>
+</div>
+
+<div id="projectsLoading" class="empty-state fade-up">
+    <div class="empty-illustration"><i class="fas fa-spinner fa-spin"></i></div>
+    <p class="mb-0 text-muted">Loading project workspaces...</p>
+</div>
+
+<div id="projectsEmpty" class="empty-state fade-up d-none">
+    <div class="empty-illustration"><i class="fas fa-diagram-project"></i></div>
+    <h4 class="mb-2">Create your first project</h4>
+    <p class="mb-3 text-muted">Projects capture briefs, collaborators, and exports for each research initiative.</p>
+    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+        <i class="fas fa-plus"></i> Start a project
+    </button>
+</div>
+
+<div id="projectsGrid" class="project-grid d-none"></div>
+
+<button class="btn btn-primary floating-action d-none" id="floatingProjectBtn" type="button" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+    <i class="fas fa-plus"></i>
+</button>
+
+<!-- Create Project Modal -->
+<div class="modal fade" id="createProjectModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create a new project workspace</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createProjectForm" class="d-grid gap-3">
+                    <div>
+                        <label for="projectName" class="form-label">Project name</label>
+                        <input type="text" class="form-control" id="projectName" placeholder="e.g., Quantum security landscape" required>
+                    </div>
+                    <div>
+                        <label for="projectDescription" class="form-label">Executive summary</label>
+                        <textarea class="form-control" id="projectDescription" rows="3" placeholder="What questions does this project answer?"></textarea>
+                        <div class="form-text">Provide context so collaborators understand the research mandate.</div>
+                    </div>
+                    <div>
+                        <label for="projectTags" class="form-label">Tags</label>
+                        <input type="text" class="form-control" id="projectTags" placeholder="technology, region, persona">
+                        <div class="form-text">Use commas to separate focus areas.</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createProject()">Create project</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let projectsData = [];
+const PIN_STORAGE_KEY = 'researchhub-pinned-projects';
+const refreshIcons = (root) => {
+    if (typeof window.refreshIconAccessibility === 'function') {
+        window.refreshIconAccessibility(root || document);
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        const loading = document.getElementById('projectsLoading');
+        const empty = document.getElementById('projectsEmpty');
+        loading.classList.add('d-none');
+        empty.classList.remove('d-none');
+        empty.innerHTML = `
+            <div class="empty-illustration"><i class="fas fa-user-lock"></i></div>
+            <h4 class="mb-2">Sign in required</h4>
+            <p class="mb-3 text-muted">Authenticate to access your projects and collaborate with teammates.</p>
+            <a href="/login" class="btn btn-primary">Sign in</a>
+        `;
+        refreshIcons(empty);
+        return;
+    }
+
+    detectViewportForFloatingAction();
+    window.addEventListener('resize', detectViewportForFloatingAction);
+    loadProjects();
+    refreshIcons(document);
+});
+
+function detectViewportForFloatingAction() {
+    const floatingBtn = document.getElementById('floatingProjectBtn');
+    if (!floatingBtn) return;
+    if (window.innerWidth < 768) {
+        floatingBtn.classList.remove('d-none');
+    } else {
+        floatingBtn.classList.add('d-none');
+    }
+}
+
+function getPinnedProjects() {
+    try {
+        const stored = localStorage.getItem(PIN_STORAGE_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+        console.warn('Failed to parse pinned projects', error);
+        return [];
+    }
+}
+
+function toggleProjectPin(projectId) {
+    const pins = new Set(getPinnedProjects());
+    if (pins.has(projectId)) {
+        pins.delete(projectId);
+    } else {
+        pins.add(projectId);
+    }
+    localStorage.setItem(PIN_STORAGE_KEY, JSON.stringify(Array.from(pins)));
+    displayProjects();
+}
+
+async function loadProjects() {
+    const loading = document.getElementById('projectsLoading');
+    const grid = document.getElementById('projectsGrid');
+    const empty = document.getElementById('projectsEmpty');
+
+    loading.classList.remove('d-none');
+    grid.classList.add('d-none');
+    empty.classList.add('d-none');
+
+    try {
+    const response = await api.get('/research/projects');
+        projectsData = response.projects || [];
+
+        loading.classList.add('d-none');
+
+        if (!projectsData.length) {
+            empty.classList.remove('d-none');
+            refreshIcons(empty);
+        } else {
+            grid.classList.remove('d-none');
+            displayProjects();
+        }
+    } catch (error) {
+        console.error('Failed to load projects:', error);
+        loading.classList.add('d-none');
+        empty.classList.remove('d-none');
+        showAlert('Failed to load projects: ' + error.message, 'error');
+        refreshIcons(empty);
+    }
+}
+
+function displayProjects() {
+    const grid = document.getElementById('projectsGrid');
+    if (!grid) return;
+
+    const pins = new Set(getPinnedProjects());
+    const sortedProjects = [...projectsData].sort((a, b) => {
+        const aPinned = pins.has(a.id);
+        const bPinned = pins.has(b.id);
+        if (aPinned === bPinned) {
+            return new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0);
+        }
+        return aPinned ? -1 : 1;
+    });
+
+    grid.innerHTML = sortedProjects.map(project => {
+        const pinned = pins.has(project.id);
+        const keywords = Array.isArray(project.keywords)
+            ? project.keywords.filter(Boolean)
+            : (project.keywords ? String(project.keywords).split(',').map(val => val.trim()).filter(Boolean) : []);
+        const rawTimestamp = project.updated_at || project.created_at;
+        let normalizedTimestamp = new Date().toISOString();
+        if (rawTimestamp) {
+            const parsedTimestamp = new Date(rawTimestamp);
+            if (!Number.isNaN(parsedTimestamp.getTime())) {
+                normalizedTimestamp = parsedTimestamp.toISOString();
+            }
+        }
+    const updatedLabel = formatRelativeTime(normalizedTimestamp);
+        const statusBadge = project.status === 'completed' ? 'badge-positive' : project.status === 'archived' ? 'badge-neutral' : 'badge-accent';
+        const statusLabel = project.status
+            ? project.status.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())
+            : 'Active';
+
+        return `
+            <div class="surface-card project-card" data-project-id="${project.id}">
+                <div class="card-header-inline">
+                    <div>
+                        <h4 class="mb-1">${escapeHtml(project.title)}</h4>
+                        <p class="mb-0 text-muted">${escapeHtml(project.description || 'Document findings, sources, and stakeholders in one place.')}</p>
+                    </div>
+                    <button class="btn-icon" type="button" onclick="toggleProjectPin(${project.id})" title="Pin project">
+                        <i class="${pinned ? 'fas fa-star text-warning' : 'far fa-star'}"></i>
+                    </button>
+                </div>
+                <div class="surface-subtle mb-3">
+                    <div class="d-flex flex-wrap gap-3">
+                        <span class="text-muted"><i class="fas fa-diagram-project"></i> ${escapeHtml(project.category || 'General')}</span>
+                        <span class="text-muted"><i class="fas fa-clock"></i> Updated <span class="relative-time" data-timestamp="${escapeHtml(normalizedTimestamp)}">${updatedLabel}</span></span>
+                        <span class="badge ${statusBadge}">${escapeHtml(statusLabel)}</span>
+                    </div>
+                </div>
+                ${keywords.length ? `<div class="chip-group mb-3">${keywords.map(tag => `<span class="chip">${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
+                <div class="card-actions">
+                    <div class="action-group">
+                        <button class="btn btn-secondary btn-sm" type="button" onclick="viewProject(${project.id})">
+                            <i class="fas fa-eye"></i> Overview
+                        </button>
+                        <button class="btn btn-secondary btn-sm" type="button" onclick="exportProject(${project.id})">
+                            <i class="fas fa-file-export"></i> Export brief
+                        </button>
+                    </div>
+                    <div class="action-group">
+                        <button class="btn-icon" type="button" onclick="deleteProject(${project.id})" title="Delete project">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    refreshIcons(grid);
+    startProjectRelativeTimeTicker();
+}
+
+async function createProject() {
+    const name = document.getElementById('projectName').value.trim();
+    const description = document.getElementById('projectDescription').value.trim();
+    const tags = document.getElementById('projectTags').value.trim();
+
+    if (!name) {
+        showAlert('Please enter a project name', 'warning');
+        return;
+    }
+
+    try {
+        const keywords = tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+        await api.post('/research/projects', { title: name, description, keywords });
+        showAlert('Project created successfully!', 'success');
+
+        const modal = bootstrap.Modal.getInstance(document.getElementById('createProjectModal'));
+        if (modal) {
+            modal.hide();
+        }
+        document.getElementById('createProjectForm').reset();
+        await loadProjects();
+    } catch (error) {
+        console.error('Project creation failed:', error);
+        showAlert('Failed to create project: ' + error.message, 'error');
+    }
+}
+
+function viewProject(projectId) {
+    showAlert(`Project detail view coming soon! Project ID: ${projectId}`, 'info');
+}
+
+function exportProject(projectId) {
+    showAlert(`Export pipeline is being finalized for project ${projectId}.`, 'info');
+}
+
+async function deleteProject(projectId) {
+    if (!confirm('Are you sure you want to delete this project?')) {
+        return;
+    }
+
+    try {
+        await api.delete(`/research/projects/${projectId}`);
+        showAlert('Project deleted successfully!', 'success');
+        await loadProjects();
+    } catch (error) {
+        showAlert('Failed to delete project: ' + error.message, 'error');
+    }
+}
+
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value ?? '';
+    return div.innerHTML;
+}
+
+let projectsRelativeTimeTimer = null;
+
+function refreshProjectRelativeTimes() {
+    const grid = document.getElementById('projectsGrid');
+    if (!grid) return;
+
+    const elements = grid.querySelectorAll('.relative-time[data-timestamp]');
+    elements.forEach(element => {
+        const timestamp = element.getAttribute('data-timestamp');
+        if (!timestamp) {
+            return;
+        }
+        try {
+            element.textContent = formatRelativeTime(timestamp);
+        } catch (error) {
+            console.warn('Failed to refresh relative time for', timestamp, error);
+        }
+    });
+}
+
+function startProjectRelativeTimeTicker() {
+    refreshProjectRelativeTimes();
+    if (projectsRelativeTimeTimer) {
+        clearInterval(projectsRelativeTimeTimer);
+    }
+    projectsRelativeTimeTimer = setInterval(refreshProjectRelativeTimes, 30000);
+}
+</script>
+{% endblock %}

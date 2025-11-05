@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block title %}Search History - ResearchHub Pro{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <span class="section-label">Search history</span>
+        <h1>Review every AI-powered insight</h1>
+        <p class="page-subtitle">Track recent queries, reopen result sets, and export evidence without losing momentum.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <a href="/search" class="btn btn-primary"><i class="fas fa-magnifying-glass"></i> New search</a>
+        <button class="btn btn-secondary" type="button" id="historyRefreshBtn"><i class="fas fa-rotate"></i> Refresh</button>
+    </div>
+</div>
+
+<div id="historyAuthRequired" class="empty-state fade-up d-none">
+    <div class="empty-illustration"><i class="fas fa-user-lock"></i></div>
+    <h4 class="mb-2">Sign in to view history</h4>
+    <p class="mb-3 text-muted">Authenticate to revisit searches, regenerate exports, and continue ongoing analysis.</p>
+    <a href="/login" class="btn btn-primary"><i class="fas fa-lock"></i> Sign in</a>
+</div>
+
+<div id="historyShell" class="d-none">
+    <div class="surface-card mb-3">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-6">
+                <label for="historyFilter" class="form-label">Filter by keyword</label>
+                <input type="search" class="form-control" id="historyFilter" placeholder="Filter queries (e.g., market, patent, competitor)">
+            </div>
+            <div class="col-md-3">
+                <label for="historyProjectFilter" class="form-label">Project</label>
+                <select class="form-select" id="historyProjectFilter">
+                    <option value="" selected>All projects</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Sort</label>
+                <div class="chip-group" id="historySortChips">
+                    <button type="button" class="chip active" data-sort="recent">Most recent</button>
+                    <button type="button" class="chip" data-sort="results">Result count</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="surface-card">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div>
+                <span class="section-label">Your archive</span>
+                <h2 class="mb-0">Saved queries</h2>
+            </div>
+            <span class="badge badge-neutral" id="historyCountBadge">0 total</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table-modern" id="historyTable" aria-live="polite">
+                <thead>
+                    <tr>
+                        <th scope="col">Query</th>
+                        <th scope="col">Results</th>
+                        <th scope="col">Duration</th>
+                        <th scope="col">When</th>
+                        <th scope="col" class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center">
+                            <div class="empty-state py-4" id="historyLoadingState">
+                                <div class="empty-illustration"><i class="fas fa-spinner fa-spin"></i></div>
+                                <p class="mb-0 text-muted">Loading your recent searches…</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-3" id="historyPagination" aria-label="Search history pagination"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const authRequired = document.getElementById('historyAuthRequired');
+    const shell = document.getElementById('historyShell');
+    const filterInput = document.getElementById('historyFilter');
+    const projectFilter = document.getElementById('historyProjectFilter');
+    const sortChips = document.querySelectorAll('#historySortChips .chip');
+    const refreshBtn = document.getElementById('historyRefreshBtn');
+    const tableBody = document.getElementById('historyTableBody');
+    const countBadge = document.getElementById('historyCountBadge');
+    const pagination = document.getElementById('historyPagination');
+
+    let fullHistory = [];
+    let filteredHistory = [];
+    let projects = new Map();
+    let currentPage = 1;
+    const perPage = 12;
+    let activeSort = 'recent';
+    let totalRecords = 0;
+    let totalPages = 1;
+
+    const refreshIcons = (root) => {
+        if (typeof window.refreshIconAccessibility === 'function') {
+            window.refreshIconAccessibility(root || document);
+        }
+    };
+
+    function setAuthState() {
+        if (!isAuthenticated()) {
+            shell.classList.add('d-none');
+            authRequired.classList.remove('d-none');
+            return false;
+        }
+        authRequired.classList.add('d-none');
+        shell.classList.remove('d-none');
+        return true;
+    }
+
+    function decorateProjects(history) {
+        projects = new Map();
+        history.forEach(item => {
+            if (item.project && item.project.title) {
+                projects.set(String(item.project_id), item.project.title);
+            }
+        });
+
+        const defaultOption = '<option value="" selected>All projects</option>';
+        const options = Array.from(projects.entries()).map(([id, title]) => `<option value="${id}">${escapeHtml(title)}</option>`);
+        projectFilter.innerHTML = defaultOption + options.join('');
+    }
+
+    function applyFilters() {
+        const term = filterInput.value.trim().toLowerCase();
+        const projectId = projectFilter.value;
+
+        filteredHistory = fullHistory.filter(item => {
+            const matchesTerm = !term || item.query_text.toLowerCase().includes(term) || (item.enhanced_query && item.enhanced_query.toLowerCase().includes(term));
+            const matchesProject = !projectId || String(item.project_id) === projectId;
+            return matchesTerm && matchesProject;
+        });
+
+        if (activeSort === 'results') {
+            filteredHistory.sort((a, b) => (b.total_results || 0) - (a.total_results || 0));
+        } else {
+            filteredHistory.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        }
+
+        const displayCount = filteredHistory.length === totalRecords
+            ? `${totalRecords} total`
+            : `Showing ${filteredHistory.length} of ${totalRecords}`;
+        countBadge.textContent = displayCount;
+        currentPage = 1;
+        renderTable();
+        refreshIcons(shell);
+    }
+
+    function paginate(items) {
+        const start = (currentPage - 1) * perPage;
+        return items.slice(start, start + perPage);
+    }
+
+    function renderPagination() {
+        if (totalPages <= 1) {
+            pagination.innerHTML = '';
+            return;
+        }
+
+        const previousDisabled = currentPage === 1 ? 'disabled' : '';
+        const nextDisabled = currentPage >= totalPages ? 'disabled' : '';
+
+        pagination.innerHTML = `
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-ghost btn-sm" type="button" ${previousDisabled ? 'disabled' : ''} aria-label="Previous page" onclick="window.changeHistoryPage(${currentPage - 1})">
+                    <i class="fas fa-arrow-left"></i> Prev
+                </button>
+                <span class="text-muted">Page ${currentPage} of ${totalPages}</span>
+                <button class="btn btn-ghost btn-sm" type="button" ${nextDisabled ? 'disabled' : ''} aria-label="Next page" onclick="window.changeHistoryPage(${currentPage + 1})">
+                    Next <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        `;
+        refreshIcons(pagination);
+    }
+
+    function renderTable() {
+        if (!filteredHistory.length) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state py-4">
+                            <div class="empty-illustration"><i class="fas fa-inbox"></i></div>
+                            <h4 class="mb-2">No saved searches yet</h4>
+                            <p class="mb-3 text-muted">Run a new search and results will be captured here automatically.</p>
+                            <a href="/search" class="btn btn-primary"><i class="fas fa-magnifying-glass"></i> Start searching</a>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            pagination.innerHTML = '';
+            refreshIcons(tableBody);
+            return;
+        }
+
+        const pageItems = paginate(filteredHistory);
+        tableBody.innerHTML = pageItems.map(item => {
+            const resultsText = `${(item.total_results || 0).toLocaleString()} result${item.total_results === 1 ? '' : 's'}`;
+            const durationText = item.execution_time ? `${item.execution_time.toFixed(2)}s` : '—';
+            const projectTitle = item.project && item.project.title ? item.project.title : '—';
+            const chip = item.enhanced_query ? '<span class="badge badge-accent ms-2">AI enhanced</span>' : '';
+
+            return `
+                <tr>
+                    <td>
+                        <div class="d-flex flex-column">
+                            <span class="fw-semibold">${escapeHtml(item.query_text)} ${chip}</span>
+                            <small class="text-muted">${escapeHtml(projectTitle)}</small>
+                        </div>
+                    </td>
+                    <td>${resultsText}</td>
+                    <td>${durationText}</td>
+                        <td>${item.created_at ? formatRelativeTime(item.created_at) : '—'}</td>
+                    <td class="text-end">
+                        <div class="action-group justify-content-end">
+                            <button class="btn-icon" type="button" onclick="window.openHistoryQuery(${item.id})" title="Open query">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn-icon" type="button" onclick="exportResults(${item.id}, 'pdf')" title="Export results">
+                                <i class="fas fa-file-arrow-down"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        renderPagination();
+        refreshIcons(tableBody);
+    }
+
+    async function loadHistory(page = 1) {
+        currentPage = page;
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center">
+                    <div class="empty-state py-4">
+                        <div class="empty-illustration"><i class="fas fa-spinner fa-spin"></i></div>
+                        <p class="mb-0 text-muted">Refreshing history…</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        refreshIcons(tableBody);
+
+        try {
+            const data = await api.get(`/research/queries?page=${page}&per_page=${perPage}`);
+            fullHistory = data.queries || [];
+            totalRecords = data.total || fullHistory.length;
+            totalPages = data.pages || Math.max(1, Math.ceil(totalRecords / perPage));
+            decorateProjects(fullHistory);
+            applyFilters();
+        } catch (error) {
+            console.error('Failed to load search history:', error);
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state py-4">
+                            <div class="empty-illustration"><i class="fas fa-triangle-exclamation"></i></div>
+                            <h4 class="mb-2">Unable to load search history</h4>
+                            <p class="mb-0 text-muted">${escapeHtml(error.message || 'Please try again shortly.')}</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            pagination.innerHTML = '';
+            refreshIcons(tableBody);
+        }
+    }
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            if (!setAuthState()) {
+                return;
+            }
+            loadHistory(currentPage);
+        });
+    }
+
+    if (filterInput) {
+        filterInput.addEventListener('input', debounce(applyFilters, 180));
+    }
+
+    if (projectFilter) {
+        projectFilter.addEventListener('change', applyFilters);
+    }
+
+    sortChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            sortChips.forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            activeSort = chip.dataset.sort;
+            applyFilters();
+        });
+    });
+
+    window.openHistoryQuery = function(queryId) {
+        window.location.href = `/search-history/${queryId}`;
+    };
+
+    window.changeHistoryPage = function(page) {
+        if (page < 1 || page > totalPages) {
+            return;
+        }
+        currentPage = page;
+        loadHistory(currentPage).then(() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    };
+
+    function escapeHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = value ?? '';
+        return div.innerHTML;
+    }
+
+    if (setAuthState()) {
+        loadHistory();
+        refreshIcons(document);
+    }
+})();
+</script>
+{% endblock %}

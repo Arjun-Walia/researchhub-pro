@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Create Account - ResearchHub Pro{% endblock %}
+
+{% block content %}
+<div class="auth-layout" aria-labelledby="registerHeading">
+    <div class="auth-panel auth-panel-wide" role="form">
+        <div class="logo-mark" aria-hidden="true"><i class="fas fa-flask"></i></div>
+        <div class="text-center">
+            <span class="section-label">Welcome</span>
+            <h1 id="registerHeading">Join ResearchHub Pro</h1>
+            <p class="mb-0">Unlock intelligence workflows tailored to {% if plan %}the {{ plan|capitalize }} plan{% else %}your team{% endif %}.</p>
+        </div>
+        <form id="registerForm" class="d-grid gap-3" novalidate>
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <label for="firstName" class="form-label">First name</label>
+                    <input type="text" class="form-control" id="firstName" name="first_name" autocomplete="given-name">
+                </div>
+                <div class="col-sm-6">
+                    <label for="lastName" class="form-label">Last name</label>
+                    <input type="text" class="form-control" id="lastName" name="last_name" autocomplete="family-name">
+                </div>
+            </div>
+            <div>
+                <label for="organization" class="form-label">Organization</label>
+                <input type="text" class="form-control" id="organization" name="organization" autocomplete="organization">
+            </div>
+            <div>
+                <label for="registerEmail" class="form-label">Work email</label>
+                <input type="email" class="form-control" id="registerEmail" name="email" autocomplete="email" required aria-required="true">
+            </div>
+            <div>
+                <label for="registerUsername" class="form-label">Username</label>
+                <input type="text" class="form-control" id="registerUsername" name="username" autocomplete="username" required aria-required="true">
+            </div>
+            <div>
+                <label for="registerPassword" class="form-label">Password</label>
+                <div class="input-append">
+                    <input type="password" class="form-control" id="registerPassword" name="password" autocomplete="new-password" minlength="8" required aria-required="true">
+                    <button type="button" class="input-action" id="registerPasswordToggle" aria-label="Toggle password visibility">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="form-text">Minimum 8 characters with a mix of letters, numbers, and symbols.</div>
+            </div>
+            <div>
+                <label for="confirmPassword" class="form-label">Confirm password</label>
+                <input type="password" class="form-control" id="confirmPassword" autocomplete="new-password" required aria-required="true">
+            </div>
+            <div class="surface-subtle">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="acceptTerms" required aria-required="true">
+                    <label class="form-check-label" for="acceptTerms">
+                        I agree to the <a href="/terms">Terms of Use</a> and <a href="/privacy">Privacy Policy</a>.
+                    </label>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100" id="registerSubmitBtn">
+                <span class="default-label"><i class="fas fa-user-plus me-1"></i> Create account</span>
+                <span class="spinner-label d-none"><i class="fas fa-spinner fa-spin me-2"></i> Preparing your workspace…</span>
+            </button>
+        </form>
+        <div class="auth-social" aria-label="Continue with a provider">
+            <button class="btn btn-secondary w-100" type="button" data-provider="google">
+                <i class="fab fa-google"></i> Sign up with Google
+            </button>
+            <button class="btn btn-secondary w-100" type="button" data-provider="github">
+                <i class="fab fa-github"></i> Sign up with GitHub
+            </button>
+        </div>
+        <div class="auth-links">
+            <span>Already have an account? <a href="/login">Sign in</a></span>
+            <span><a href="/forgot-password">Forgot password</a></span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const form = document.getElementById('registerForm');
+    const submitBtn = document.getElementById('registerSubmitBtn');
+    const passwordField = document.getElementById('registerPassword');
+    const confirmField = document.getElementById('confirmPassword');
+    const passwordToggle = document.getElementById('registerPasswordToggle');
+    const perplexityField = document.getElementById('registerPerplexityKey');
+    const perplexityToggle = document.getElementById('registerPerplexityToggle');
+    const socialButtons = document.querySelectorAll('.auth-social button[data-provider]');
+
+    function setSubmitting(submitting) {
+        submitBtn.disabled = submitting;
+        submitBtn.querySelector('.default-label').classList.toggle('d-none', submitting);
+        submitBtn.querySelector('.spinner-label').classList.toggle('d-none', !submitting);
+    }
+
+    if (passwordToggle) {
+        passwordToggle.addEventListener('click', () => {
+            const isPassword = passwordField.getAttribute('type') === 'password';
+            passwordField.setAttribute('type', isPassword ? 'text' : 'password');
+            passwordToggle.innerHTML = isPassword ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+        });
+    }
+
+    if (perplexityToggle && perplexityField) {
+        perplexityToggle.addEventListener('click', () => {
+            const isPassword = perplexityField.getAttribute('type') === 'password';
+            perplexityField.setAttribute('type', isPassword ? 'text' : 'password');
+            perplexityToggle.innerHTML = isPassword ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return;
+            }
+
+            const password = passwordField.value;
+            const confirmPassword = confirmField.value;
+
+            if (password !== confirmPassword) {
+                showAlert('Passwords do not match. Please try again.', 'warning');
+                confirmField.focus();
+                return;
+            }
+
+            const payload = {
+                email: document.getElementById('registerEmail').value.trim(),
+                username: document.getElementById('registerUsername').value.trim(),
+                password,
+                first_name: document.getElementById('firstName').value.trim(),
+                last_name: document.getElementById('lastName').value.trim(),
+                organization: document.getElementById('organization').value.trim(),
+                perplexity_api_key: perplexityField ? perplexityField.value.trim() : '',
+                plan: '{{ plan or "free" }}'
+            };
+
+            try {
+                setSubmitting(true);
+                await register(payload);
+            } catch (error) {
+                console.warn('Registration error:', error);
+            } finally {
+                setSubmitting(false);
+            }
+        });
+    }
+
+    socialButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const provider = button.getAttribute('data-provider');
+            showAlert(`Single sign-on with ${provider.charAt(0).toUpperCase() + provider.slice(1)} is coming soon.`, 'info');
+        });
+    });
+
+    const tooltipTriggers = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggers.forEach(trigger => new bootstrap.Tooltip(trigger));
+})();
+</script>
+{% endblock %}

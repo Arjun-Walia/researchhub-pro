@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Signing Out - ResearchHub Pro{% endblock %}
+
+{% block content %}
+<div class="auth-layout" aria-live="polite">
+    <div class="surface-card text-center" style="max-width: 420px;">
+        <div class="empty-illustration" aria-hidden="true"><i class="fas fa-arrow-right-from-bracket"></i></div>
+        <h1>Signing you out</h1>
+        <p class="mb-0">We are ending your session and clearing credentials. You will be redirected shortly.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(async function() {
+    await logout({ silent: true });
+    showAlert('You have been signed out.', 'info');
+    setTimeout(() => {
+        window.location.href = '/login';
+    }, 900);
+})();
+</script>
+{% endblock %}

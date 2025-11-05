@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: researchhub
+      POSTGRES_USER: researchhub
+      POSTGRES_PASSWORD: researchhub_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U researchhub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Flask Application
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://researchhub:researchhub_password@db:5432/researchhub
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    command: gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 run:app
+
+  # Celery Worker for Background Tasks
+  celery_worker:
+    build: .
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://researchhub:researchhub_password@db:5432/researchhub
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    command: celery -A app:create_celery_app worker --loglevel=info
+
+  # Celery Beat for Scheduled Tasks
+  celery_beat:
+    build: .
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://researchhub:researchhub_password@db:5432/researchhub
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    command: celery -A app:create_celery_app beat --loglevel=info
+
+volumes:
+  postgres_data:
+  redis_data:

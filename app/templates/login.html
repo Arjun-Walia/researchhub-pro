@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - ResearchHub Pro{% endblock %}
+
+{% block content %}
+<div class="auth-layout" aria-labelledby="loginHeading">
+    <div class="auth-panel auth-panel-wide" role="form">
+        <div class="logo-mark" aria-hidden="true"><i class="fas fa-flask"></i></div>
+        <div class="text-center">
+            <span class="section-label">Account access</span>
+            <h1 id="loginHeading">Sign in to continue</h1>
+            <p class="mb-0">Use your ResearchHub Pro credentials to reach your personalised dashboard.</p>
+        </div>
+        <form id="loginForm" class="d-grid gap-3" novalidate>
+            <div>
+                <label for="loginIdentifier" class="form-label">Email or username</label>
+                <input type="text" class="form-control" id="loginIdentifier" name="identifier" autocomplete="username" required aria-required="true">
+            </div>
+            <div>
+                <label for="loginPassword" class="form-label">Password</label>
+                <div class="input-append">
+                    <input type="password" class="form-control" id="loginPassword" name="password" autocomplete="current-password" required aria-required="true">
+                    <button type="button" class="input-action" id="loginPasswordToggle" aria-label="Toggle password visibility">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="rememberDevice">
+                    <label class="form-check-label" for="rememberDevice">Remember this device</label>
+                </div>
+                <a href="/forgot-password" class="small">Forgot password?</a>
+            </div>
+            <button type="submit" class="btn btn-primary w-100" id="loginSubmitBtn">
+                <span class="default-label"><i class="fas fa-arrow-right-to-bracket me-1"></i> Sign in</span>
+                <span class="spinner-label d-none"><i class="fas fa-spinner fa-spin me-2"></i> Signing you in…</span>
+            </button>
+        </form>
+        <div class="auth-social" aria-label="Continue with a provider">
+            <button class="btn btn-secondary w-100" type="button" data-provider="google">
+                <i class="fab fa-google"></i> Continue with Google
+            </button>
+            <button class="btn btn-secondary w-100" type="button" data-provider="github">
+                <i class="fab fa-github"></i> Continue with GitHub
+            </button>
+        </div>
+        <div class="auth-links">
+            <span>New here? <a href="/register">Create an account</a></span>
+            <span><a href="/register?plan=enterprise">Explore enterprise plans</a></span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const form = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('loginSubmitBtn');
+    const passwordField = document.getElementById('loginPassword');
+    const passwordToggle = document.getElementById('loginPasswordToggle');
+    const socialButtons = document.querySelectorAll('.auth-social button[data-provider]');
+
+    function setSubmitting(submitting) {
+        submitBtn.disabled = submitting;
+        submitBtn.querySelector('.default-label').classList.toggle('d-none', submitting);
+        submitBtn.querySelector('.spinner-label').classList.toggle('d-none', !submitting);
+    }
+
+    if (passwordToggle) {
+        passwordToggle.addEventListener('click', () => {
+            const isPassword = passwordField.getAttribute('type') === 'password';
+            passwordField.setAttribute('type', isPassword ? 'text' : 'password');
+            passwordToggle.innerHTML = isPassword ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return;
+            }
+
+            const identifier = document.getElementById('loginIdentifier').value.trim();
+            const password = passwordField.value;
+            if (!identifier || !password) {
+                showAlert('Please provide both your email or username and password.', 'warning');
+                return;
+            }
+
+            try {
+                setSubmitting(true);
+                await login(identifier, password);
+            } catch (error) {
+                console.warn('Login error:', error);
+            } finally {
+                setSubmitting(false);
+            }
+        });
+    }
+
+    socialButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const provider = button.getAttribute('data-provider');
+            showAlert(`Single sign-on with ${provider.charAt(0).toUpperCase() + provider.slice(1)} is coming soon.`, 'info');
+        });
+    });
+})();
+</script>
+{% endblock %}
