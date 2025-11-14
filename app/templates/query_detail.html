@@ -24,7 +24,18 @@
 </div>
 
 <div id="queryLoading" class="empty-state fade-up">
-    <div class="empty-illustration"><i class="fas fa-spinner fa-spin"></i></div>
+    <div class="empty-illustration">
+        <div class="dot-spinner dot-spinner--lg" aria-hidden="true">
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+        </div>
+    </div>
     <p class="mb-0 text-muted">Retrieving saved search results…</p>
 </div>
 
@@ -92,7 +103,7 @@
             </div>
             <div class="action-group">
                 <button class="btn btn-secondary" type="button" id="queryReopenBtn"><i class="fas fa-magnifying-glass-plus"></i> Re-run search</button>
-                <button class="btn btn-secondary" type="button" id="queryAddCollectionBtn"><i class="fas fa-bookmark"></i> Save to collection</button>
+                <button class="btn btn-secondary" type="button" id="queryAddCollectionBtn" data-bookmark-control data-bookmark-variant="inline" data-bookmark-toggle="momentary">Save to collection</button>
             </div>
         </div>
         <div id="queryResultsContainer" class="d-grid gap-3"></div>

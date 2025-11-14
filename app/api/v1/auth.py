@@ -13,7 +13,7 @@ from flask_jwt_extended import (
 from sqlalchemy import or_, func
 
 from app.utils.jwt_helpers import get_current_user_id
-from app.models import User, ResearchProject, Query, Collection, IntegrationEvent, OAuthConnection
+from app.models import User, ResearchProject, Query, Collection, IntegrationEvent, OAuthConnection, EmailVerificationToken
 from app.services.email_service import EmailService
 from app.services.analytics_service import AnalyticsService
 from app.services.perplexity_service import PerplexityService, PerplexityValidationError
@@ -48,6 +48,12 @@ INTEGRATION_METADATA: Dict[str, Dict[str, Any]] = {
         'label': 'SerpAPI',
         'capabilities': ['web-enrichment', 'search'],
         'validation_timeout': lambda app: app.config.get('INTEGRATION_VALIDATION_TIMEOUT', 8)
+    },
+    'gemini': {
+        'field': 'gemini_api_key',
+        'label': 'Gemini',
+        'capabilities': ['search', 'ai-models', 'analytics'],
+        'validation_timeout': lambda app: app.config.get('INTEGRATION_VALIDATION_TIMEOUT', 8)
     }
 }
 
@@ -60,6 +66,10 @@ GENERIC_INTEGRATIONS = {
 
 class IntegrationValidationError(Exception):
     """Raised when a non-Perplexity provider rejects an API key."""
+
+    def __init__(self, message: str, reason: str = 'validation_failed'):
+        super().__init__(message)
+        self.reason = reason
 
 
 def compute_integration_capabilities(user: User) -> Dict[str, Any]:
@@ -74,16 +84,17 @@ def compute_integration_capabilities(user: User) -> Dict[str, Any]:
     }
 
     powered_by = [labels[p] for p, flag in active.items() if flag]
-    ai_models = [labels[p] for p in ('openai', 'anthropic') if active.get(p)]
+    ai_models = [labels[p] for p in ('openai', 'anthropic', 'gemini') if active.get(p)]
     enrichment = [labels[p] for p in ('serpapi',) if active.get(p)]
+    search_engines = [labels[p] for p in ('perplexity', 'serpapi', 'gemini') if active.get(p)]
 
     return {
         'powered_by': powered_by,
-        'search_provider': labels['perplexity'] if active.get('perplexity') else None,
+        'search_provider': ', '.join(search_engines) if search_engines else None,
         'ai_model_providers': ai_models,
         'enrichment_providers': enrichment,
-        'has_premium_search': active.get('perplexity', False),
-        'has_premium_ai': any(active.get(p) for p in ('openai', 'anthropic')),
+        'has_premium_search': bool(search_engines),
+        'has_premium_ai': any(active.get(p) for p in ('openai', 'anthropic', 'gemini')),
         'has_enrichment': any(enrichment)
     }
 
@@ -103,6 +114,20 @@ def record_integration_event(user: User, provider: str, action: str, status: str
         logger.warning("Failed to record integration event for %s: %s", provider, exc)
 
 
+def _send_email_verification(user: User) -> Optional[str]:
+    """Generate a fresh verification token and send an email."""
+    try:
+        verification = user.generate_email_verification_token()
+        frontend_base = current_app.config.get('FRONTEND_URL') or request.host_url.rstrip('/')
+        verify_link = f"{frontend_base}/verify-email?token={verification.token}"
+        mail_extension = current_app.extensions.get('mail') if hasattr(current_app, 'extensions') else None
+        EmailService(mail_extension).send_verification_email(user.email, verify_link)
+        return verify_link
+    except Exception as exc:  # pragma: no cover - logging only
+        logger.warning("Failed to dispatch verification email: %s", exc)
+        return None
+
+
 def _validate_openai_key(api_key: str, timeout: int) -> Dict[str, Any]:
     headers = {
         'Authorization': f'Bearer {api_key}',
@@ -110,12 +135,12 @@ def _validate_openai_key(api_key: str, timeout: int) -> Dict[str, Any]:
     try:
         response = requests.get('https://api.openai.com/v1/models', headers=headers, timeout=timeout)
     except requests.exceptions.RequestException as exc:
-        raise IntegrationValidationError('Unable to reach OpenAI for validation. Please try again.') from exc
+        raise IntegrationValidationError('Unable to reach OpenAI for validation. Please try again.', reason='network') from exc
 
     if response.status_code == 401:
-        raise IntegrationValidationError('OpenAI rejected the API key. Double-check and try again.')
+        raise IntegrationValidationError('OpenAI rejected the API key. Double-check and try again.', reason='invalid_credentials')
     if response.status_code >= 400:
-        raise IntegrationValidationError('OpenAI validation is unavailable right now. Retry shortly.')
+        raise IntegrationValidationError('OpenAI validation is unavailable right now. Retry shortly.', reason='api_error')
 
     try:
         payload = response.json()
@@ -139,12 +164,12 @@ def _validate_anthropic_key(api_key: str, timeout: int) -> Dict[str, Any]:
     try:
         response = requests.get('https://api.anthropic.com/v1/models', headers=headers, timeout=timeout)
     except requests.exceptions.RequestException as exc:
-        raise IntegrationValidationError('Unable to reach Anthropic for validation.') from exc
+        raise IntegrationValidationError('Unable to reach Anthropic for validation.', reason='network') from exc
 
     if response.status_code == 401:
-        raise IntegrationValidationError('Anthropic rejected the API key. Confirm the value and try again.')
+        raise IntegrationValidationError('Anthropic rejected the API key. Confirm the value and try again.', reason='invalid_credentials')
     if response.status_code >= 400:
-        raise IntegrationValidationError('Anthropic validation is currently unavailable. Please retry later.')
+        raise IntegrationValidationError('Anthropic validation is currently unavailable. Please retry later.', reason='api_error')
 
     try:
         payload = response.json()
@@ -167,12 +192,12 @@ def _validate_serpapi_key(api_key: str, timeout: int) -> Dict[str, Any]:
     try:
         response = requests.get('https://serpapi.com/account', params=params, timeout=timeout)
     except requests.exceptions.RequestException as exc:
-        raise IntegrationValidationError('Unable to reach SerpAPI for validation. Check connectivity and retry.') from exc
+        raise IntegrationValidationError('Unable to reach SerpAPI for validation. Check connectivity and retry.', reason='network') from exc
 
     if response.status_code == 401:
-        raise IntegrationValidationError('SerpAPI reported the key as invalid. Please verify and resubmit.')
+        raise IntegrationValidationError('SerpAPI reported the key as invalid. Please verify and resubmit.', reason='invalid_credentials')
     if response.status_code >= 400:
-        raise IntegrationValidationError('SerpAPI validation endpoint is unavailable. Try again shortly.')
+        raise IntegrationValidationError('SerpAPI validation endpoint is unavailable. Try again shortly.', reason='api_error')
 
     try:
         payload = response.json()
@@ -192,10 +217,43 @@ def _validate_serpapi_key(api_key: str, timeout: int) -> Dict[str, Any]:
     }
 
 
+def _validate_gemini_key(api_key: str, timeout: int) -> Dict[str, Any]:
+    params = {
+        'key': api_key
+    }
+    try:
+        response = requests.get(
+            'https://generativelanguage.googleapis.com/v1beta/models',
+            params=params,
+            timeout=timeout
+        )
+    except requests.exceptions.RequestException as exc:
+        raise IntegrationValidationError('Unable to reach Gemini for validation. Check connectivity and retry.', reason='network') from exc
+
+    if response.status_code == 401:
+        raise IntegrationValidationError('Gemini reported the key as invalid. Please verify and resubmit.', reason='invalid_credentials')
+    if response.status_code >= 400:
+        raise IntegrationValidationError('Gemini validation endpoint is unavailable. Try again shortly.', reason='api_error')
+
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = {}
+
+    models = payload.get('models')
+    model_count = len(models) if isinstance(models, list) else 0
+    return {
+        'status': 'linked',
+        'models_detected': model_count,
+        'raw': payload if isinstance(payload, dict) else {}
+    }
+
+
 VALIDATION_HANDLERS = {
     'openai': _validate_openai_key,
     'anthropic': _validate_anthropic_key,
-    'serpapi': _validate_serpapi_key
+    'serpapi': _validate_serpapi_key,
+    'gemini': _validate_gemini_key
 }
 
 
@@ -252,6 +310,8 @@ def build_user_payload(user: User, include_sensitive: bool = False) -> dict:
 
     base_payload['integration_capabilities'] = compute_integration_capabilities(user)
 
+    return base_payload
+
 
 
 def apply_perplexity_api_key(user: User, api_key: Optional[str]):
@@ -286,6 +346,29 @@ def apply_perplexity_api_key(user: User, api_key: Optional[str]):
     try:
         result = service.validate_key()
     except PerplexityValidationError as exc:
+        if getattr(exc, 'reason', None) in {'network', 'api_error'}:
+            user.set_perplexity_api_key(key, validated=False)
+            user.save()
+            fallback_payload = {
+                'connected': True,
+                'status': 'pending',
+                'just_linked': existing_plain != key,
+                'last_validated_at': None,
+                'metadata': {
+                    'notice': str(exc),
+                    'reason': getattr(exc, 'reason', None)
+                }
+            }
+            record_integration_event(
+                user,
+                'perplexity',
+                'validate',
+                'warning',
+                'Perplexity key saved but validation deferred',
+                metadata=fallback_payload.get('metadata')
+            )
+            return fallback_payload
+
         record_integration_event(user, 'perplexity', 'validate', 'error', str(exc))
         raise
 
@@ -299,6 +382,9 @@ def apply_perplexity_api_key(user: User, api_key: Optional[str]):
         'just_linked': existing_plain != key,
         'last_validated_at': user.perplexity_key_last_validated_at.isoformat() if user.perplexity_key_last_validated_at else None
     })
+    response_payload.setdefault('metadata', {})
+    if 'models_detected' in response_payload:
+        response_payload['metadata'].setdefault('models_detected', response_payload.get('models_detected'))
 
     record_integration_event(
         user,
@@ -321,8 +407,16 @@ def apply_generic_api_key(user: User, provider: str, api_key: Optional[str]):
 
     if not key:
         user.update_integration_key(provider, None)
+        user.require_email_verification()
         user.save()
-        record_integration_event(user, provider, 'remove', 'success', f'{INTEGRATION_METADATA.get(provider, {}).get("label", provider.title())} key removed')
+        verification_link = _send_email_verification(user)
+        record_integration_event(
+            user,
+            provider,
+            'remove',
+            'success',
+            f"{INTEGRATION_METADATA.get(provider, {}).get('label', provider.title())} key removed"
+        )
         return {
             'connected': False,
             'status': 'not_configured',
@@ -332,6 +426,27 @@ def apply_generic_api_key(user: User, provider: str, api_key: Optional[str]):
     try:
         validation = validate_integration_key(provider, key)
     except IntegrationValidationError as exc:
+        if exc.reason == 'network':
+            user.update_integration_key(provider, key)
+            user.save()
+            response = {
+                'connected': True,
+                'status': 'pending',
+                'last_validated_at': None,
+                'metadata': {
+                    'notice': str(exc)
+                }
+            }
+            record_integration_event(
+                user,
+                provider,
+                'validate',
+                'warning',
+                f"{INTEGRATION_METADATA.get(provider, {}).get('label', provider.title())} key saved but validation deferred",
+                metadata=response.get('metadata')
+            )
+            return response
+
         record_integration_event(
             user,
             provider,
@@ -340,6 +455,7 @@ def apply_generic_api_key(user: User, provider: str, api_key: Optional[str]):
             str(exc)
         )
         raise
+
     user.update_integration_key(provider, key)
     user.save()
     stamp_attr = f"{provider}_key_last_validated_at"
@@ -388,6 +504,7 @@ def register():
         username = data.get('username', '').strip()
         password = data.get('password', '')
         perplexity_key = (data.get('perplexity_api_key') or '').strip()
+        verification_link = None
         
         if not email or not username or not password:
             return jsonify({'error': 'Missing required fields'}), 400
@@ -432,7 +549,9 @@ def register():
                 except IntegrationValidationError as exc:
                     return jsonify({'error': str(exc), 'provider': provider}), 400
 
+        user.require_email_verification()
         user.save()
+        verification_link = _send_email_verification(user)
         
         # Track activity
         analytics.track_activity(
@@ -450,7 +569,9 @@ def register():
             'message': 'Registration successful',
             'user': build_user_payload(user, include_sensitive=True),
             'access_token': access_token,
-            'refresh_token': refresh_token
+            'refresh_token': refresh_token,
+            'verification_required': True,
+            'verification_link': verification_link
         }
 
         if perplexity_feedback:
@@ -550,7 +671,8 @@ def login():
             'message': 'Login successful',
             'user': build_user_payload(user, include_sensitive=True),
             'access_token': access_token,
-            'refresh_token': refresh_token
+            'refresh_token': refresh_token,
+            'verification_required': not user.is_verified
         }
 
         if perplexity_feedback:
@@ -655,6 +777,21 @@ def update_profile():
             user.bio = data['bio']
         if 'organization' in data:
             user.organization = data['organization']
+        verification_link = None
+        if 'email' in data and data['email']:
+            new_email = data['email'].strip().lower()
+            if new_email != user.email:
+                if not validate_email(new_email):
+                    return jsonify({'error': 'Invalid email format'}), 400
+                email_conflict = User.query.filter(
+                    User.email == new_email,
+                    User.id != user.id
+                ).first()
+                if email_conflict:
+                    return jsonify({'error': 'Email already registered'}), 409
+                user.email = new_email
+                user.require_email_verification()
+                verification_link = _send_email_verification(user)
 
         perplexity_feedback = None
         integration_feedback = {}
@@ -683,6 +820,10 @@ def update_profile():
             'message': 'Profile updated',
             'user': build_user_payload(user, include_sensitive=True)
         }
+
+        if verification_link:
+            response_payload['verification_required'] = True
+            response_payload['verification_link'] = verification_link
 
         if perplexity_feedback is not None:
             response_payload['perplexity_integration'] = perplexity_feedback
@@ -874,6 +1015,69 @@ def logout():
     except Exception as e:
         logger.error(f"Logout failed: {str(e)}")
         return jsonify({'error': 'Logout failed'}), 500
+
+
+@bp.route('/verify-email', methods=['GET', 'POST'])
+@limiter.limit("10 per hour")
+def complete_email_verification():
+    """Confirm a pending email verification token."""
+    try:
+        token = request.args.get('token') if request.method == 'GET' else (request.get_json() or {}).get('token')
+        if not token:
+            return jsonify({'error': 'Verification token is required'}), 400
+
+        verification = EmailVerificationToken.find_valid_token(token)
+        if not verification:
+            return jsonify({'error': 'Invalid or expired verification token'}), 400
+
+        user = verification.user
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        user.mark_email_verified()
+        user.save()
+        verification.mark_consumed()
+
+        analytics.track_activity(
+            user_id=user.id,
+            activity_type='email_verified'
+        )
+
+        return jsonify({
+            'message': 'Email verified successfully',
+            'user': build_user_payload(user, include_sensitive=True)
+        }), 200
+
+    except Exception as exc:
+        logger.error('Email verification failed: %s', exc)
+        return jsonify({'error': 'Unable to verify email'}), 500
+
+
+@bp.route('/verify-email/resend', methods=['POST'])
+@jwt_required()
+def resend_email_verification():
+    """Resend verification email for the current user."""
+    try:
+        user_id = get_current_user_id()
+        if user_id is None:
+            return jsonify({'error': 'Invalid token subject'}), 401
+
+        user = User.get_by_id(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        if user.is_verified:
+            return jsonify({'message': 'Email already verified'}), 200
+
+        verification_link = _send_email_verification(user)
+        if not verification_link:
+            return jsonify({'error': 'Unable to send verification email'}), 500
+
+        return jsonify({'message': 'Verification email sent', 'verification_link': verification_link}), 200
+
+    except Exception as exc:
+        logger.error('Resend verification failed: %s', exc)
+        return jsonify({'error': 'Unable to resend verification email'}), 500
 
 
 @bp.route('/password/forgot', methods=['POST'])

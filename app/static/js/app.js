@@ -161,7 +161,10 @@ async function login(identifier, password, integrationOverrides = '') {
         syncNavigationForAuth(data.user);
         showAlert('Welcome back to ResearchHub Pro!', 'success');
         handleIntegrationFeedback(data);
-        setTimeout(() => window.location.href = '/dashboard', 800);
+        if (data.user && data.user.is_verified === false) {
+            showAlert('Please verify your email to unlock all features. Check your inbox for the latest verification link.', 'warning');
+        }
+    setTimeout(() => window.location.href = '/', 800);
         return data;
     } catch (error) {
         const message = error instanceof ApiError ? error.message : 'Unable to sign in right now.';
@@ -188,7 +191,10 @@ async function register(userData) {
         syncNavigationForAuth(data.user);
         showAlert('Account created successfully. Setting up your workspace…', 'success');
         handleIntegrationFeedback(data);
-        setTimeout(() => window.location.href = '/dashboard', 900);
+        if (data.user && data.user.is_verified === false) {
+            showAlert('We sent a verification email. Please confirm your address to enable premium workflows.', 'info');
+        }
+    setTimeout(() => window.location.href = '/', 900);
         return data;
     } catch (error) {
         const message = error instanceof ApiError ? error.message : 'Registration failed. Please try again later.';
@@ -373,12 +379,243 @@ function showAlert(message, type = 'info') {
 function showLoading(element, message = 'Loading...') {
     element.innerHTML = `
         <div class="text-center py-5">
-            <div class="spinner-border text-primary mb-3" role="status">
-                <span class="visually-hidden">Loading...</span>
+            <div class="dot-spinner dot-spinner--lg dot-spinner--neutral mb-3" aria-hidden="true">
+                <span class="dot-spinner__dot"></span>
+                <span class="dot-spinner__dot"></span>
+                <span class="dot-spinner__dot"></span>
+                <span class="dot-spinner__dot"></span>
+                <span class="dot-spinner__dot"></span>
+                <span class="dot-spinner__dot"></span>
+                <span class="dot-spinner__dot"></span>
+                <span class="dot-spinner__dot"></span>
             </div>
             <p class="text-muted">${message}</p>
         </div>
     `;
+}
+
+const CHECKBOX_ANIMATION_SVG = `
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <path d="M1,9 L1,3.5 C1,2 2,1 3.5,1 L14.5,1 C16,1 17,2 17,3.5 L17,14.5 C17,16 16,17 14.5,17 L3.5,17 C2,17 1,16 1,14.5 L1,9 Z"></path>
+        <polyline points="1 9 7 14 15 4"></polyline>
+    </svg>
+`.trim();
+
+let checkboxObserver = null;
+
+function enhanceSingleCheckbox(input) {
+    if (!(input instanceof HTMLInputElement) || input.type !== 'checkbox') {
+        return;
+    }
+    if (input.dataset.animatedCheckbox === 'true') {
+        return;
+    }
+    if (input.dataset.noAnimatedCheckbox === 'true') {
+        return;
+    }
+    if (input.closest('.form-switch')) {
+        return;
+    }
+
+    const parent = input.parentNode;
+    if (!parent) {
+        return;
+    }
+
+    const wrapper = document.createElement('span');
+    wrapper.className = 'checkbox-wrapper';
+
+    const visual = document.createElement('span');
+    visual.className = 'checkbox-visual';
+    visual.setAttribute('aria-hidden', 'true');
+    visual.innerHTML = CHECKBOX_ANIMATION_SVG;
+
+    input.dataset.animatedCheckbox = 'true';
+
+    parent.insertBefore(wrapper, input);
+    wrapper.appendChild(input);
+    wrapper.appendChild(visual);
+}
+
+function enhanceCheckboxes(root = document) {
+    const scope = root && typeof root.querySelectorAll === 'function' ? root : document;
+    const selector = 'input[type="checkbox"]:not([data-animated-checkbox])';
+    scope.querySelectorAll(selector).forEach(enhanceSingleCheckbox);
+}
+
+function initializeCheckboxEnhancements() {
+    enhanceCheckboxes(document);
+
+    if (checkboxObserver || !('MutationObserver' in window) || !document.body) {
+        return;
+    }
+
+    checkboxObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (!(node instanceof Element)) {
+                    return;
+                }
+                if (node.matches('input[type="checkbox"]')) {
+                    enhanceSingleCheckbox(node);
+                }
+                if (node.querySelectorAll) {
+                    node.querySelectorAll('input[type="checkbox"]').forEach(enhanceSingleCheckbox);
+                }
+            });
+        });
+    });
+
+    checkboxObserver.observe(document.body, { childList: true, subtree: true });
+}
+
+const BOOKMARK_SVG_MARKUP = `
+    <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <path d="M27 4v27a1 1 0 0 1-1.625.781L16 24.281l-9.375 7.5A1 1 0 0 1 5 31V4a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4z"></path>
+    </svg>
+`.trim();
+
+const BOOKMARK_RESET_DELAY = 650;
+let bookmarkObserver = null;
+let bookmarkClickHandlerBound = false;
+
+function enhanceBookmarkControl(control) {
+    if (!(control instanceof HTMLElement)) {
+        return;
+    }
+    if (control.dataset.bookmarkControlInitialized === 'true') {
+        return;
+    }
+
+    const labelText = control.dataset.bookmarkLabel || control.getAttribute('title') || 'Save bookmark';
+    const variant = control.dataset.bookmarkVariant || (control.classList.contains('btn') ? 'inline' : 'icon');
+
+    control.dataset.bookmarkControlInitialized = 'true';
+    control.classList.add('bookmark-toggle');
+    control.setAttribute('aria-pressed', control.getAttribute('aria-pressed') || 'false');
+    if (labelText && !control.classList.contains('btn')) {
+        control.setAttribute('aria-label', labelText);
+    }
+
+    let wrapper = control.querySelector('.ui-bookmark');
+    if (!wrapper) {
+        wrapper = document.createElement('span');
+        wrapper.className = 'ui-bookmark';
+        if (variant === 'inline') {
+            wrapper.classList.add('ui-bookmark--inline');
+        }
+        if (control.dataset.bookmarkStatic === 'true') {
+            wrapper.classList.add('ui-bookmark--static');
+        }
+
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.setAttribute('aria-hidden', 'true');
+        input.tabIndex = -1;
+
+        const visual = document.createElement('span');
+        visual.className = 'bookmark';
+        visual.innerHTML = BOOKMARK_SVG_MARKUP;
+
+        wrapper.appendChild(input);
+        wrapper.appendChild(visual);
+
+        control.insertBefore(wrapper, control.firstChild);
+    }
+
+    const input = wrapper.querySelector('input[type="checkbox"]');
+    if (input) {
+        input.setAttribute('aria-hidden', 'true');
+        input.tabIndex = -1;
+        if (input.checked) {
+            control.setAttribute('aria-pressed', 'true');
+        }
+    }
+
+    if (!control.querySelector('.sr-only') && !control.classList.contains('btn')) {
+        const srText = document.createElement('span');
+        srText.className = 'sr-only';
+        srText.textContent = labelText;
+        control.appendChild(srText);
+    }
+}
+
+function enhanceBookmarkControls(root = document) {
+    const scope = root && typeof root.querySelectorAll === 'function' ? root : document;
+    scope.querySelectorAll('[data-bookmark-control]').forEach(enhanceBookmarkControl);
+}
+
+function handleBookmarkControlClick(event) {
+    const control = event.target.closest('[data-bookmark-control]');
+    if (!control) {
+        return;
+    }
+    if (control.disabled || control.getAttribute('aria-disabled') === 'true') {
+        return;
+    }
+
+    const wrapper = control.querySelector('.ui-bookmark');
+    const input = wrapper ? wrapper.querySelector('input[type="checkbox"]') : null;
+    const momentary = control.dataset.bookmarkToggle === 'momentary';
+
+    if (input) {
+        if (momentary) {
+            input.checked = true;
+            control.setAttribute('aria-pressed', 'true');
+            if (control._bookmarkResetTimer) {
+                clearTimeout(control._bookmarkResetTimer);
+            }
+            control._bookmarkResetTimer = window.setTimeout(() => {
+                input.checked = false;
+                control.setAttribute('aria-pressed', 'false');
+                control._bookmarkResetTimer = null;
+            }, BOOKMARK_RESET_DELAY);
+        } else {
+            input.checked = !input.checked;
+            control.setAttribute('aria-pressed', input.checked ? 'true' : 'false');
+        }
+    }
+
+    const action = control.dataset.bookmarkAction;
+    if (action === 'collection' && typeof window.addToCollectionPrompt === 'function') {
+        const resultId = Number(control.dataset.resultId);
+        window.addToCollectionPrompt(resultId);
+    }
+
+    if (control.dataset.bookmarkEvent) {
+        control.dispatchEvent(new CustomEvent(control.dataset.bookmarkEvent, { bubbles: true }));
+    }
+}
+
+function initializeBookmarkEnhancements() {
+    enhanceBookmarkControls(document);
+
+    if (!bookmarkClickHandlerBound) {
+        document.addEventListener('click', handleBookmarkControlClick);
+        bookmarkClickHandlerBound = true;
+    }
+
+    if (bookmarkObserver || !('MutationObserver' in window) || !document.body) {
+        return;
+    }
+
+    bookmarkObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (!(node instanceof Element)) {
+                    return;
+                }
+                if (node.matches('[data-bookmark-control]')) {
+                    enhanceBookmarkControl(node);
+                }
+                if (node.querySelectorAll) {
+                    node.querySelectorAll('[data-bookmark-control]').forEach(enhanceBookmarkControl);
+                }
+            });
+        });
+    });
+
+    bookmarkObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 function formatDate(dateString) {
@@ -386,40 +623,154 @@ function formatDate(dateString) {
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
 }
 
-function formatRelativeTime(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.floor((now - date) / 1000);
+const RELATIVE_TIME_FORMATTER = typeof Intl !== 'undefined' && Intl.RelativeTimeFormat
+    ? new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
+    : null;
 
-    if (seconds < 10) return 'just now';
-    if (seconds < 60) return `${seconds} seconds ago`;
-    if (seconds < 3600) {
-        const minutes = Math.floor(seconds / 60);
-        return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+const RELATIVE_TIME_THRESHOLDS = [
+    { unit: 'second', limit: 45, divisor: 1 },
+    { unit: 'minute', limit: 45 * 60, divisor: 60 },
+    { unit: 'hour', limit: 22 * 3600, divisor: 3600 },
+    { unit: 'day', limit: 26 * 86400, divisor: 86400 },
+    { unit: 'week', limit: 4 * 7 * 86400, divisor: 7 * 86400 },
+    { unit: 'month', limit: 11 * 30 * 86400, divisor: 30 * 86400 },
+    { unit: 'year', limit: Infinity, divisor: 365 * 86400 }
+];
+
+const FALLBACK_RELATIVE_UNITS = [
+    { unit: 'second', limit: 60, divisor: 1 },
+    { unit: 'minute', limit: 60 * 60, divisor: 60 },
+    { unit: 'hour', limit: 24 * 60 * 60, divisor: 60 * 60 },
+    { unit: 'day', limit: 7 * 24 * 60 * 60, divisor: 24 * 60 * 60 }
+];
+
+function normalizeIsoString(input) {
+    if (typeof input !== 'string') {
+        return null;
     }
-    if (seconds < 86400) {
-        const hours = Math.floor(seconds / 3600);
-        const remainingSeconds = seconds - hours * 3600;
-        const minutes = Math.floor(remainingSeconds / 60);
-        if (hours >= 6) {
-            return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-        }
-        if (hours >= 1) {
-            if (minutes === 0) {
-                return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    const trimmed = input.trim();
+    if (!trimmed) {
+        return null;
+    }
+    const hasTimezone = /([zZ]|[+-]\d{2}:?\d{2})$/.test(trimmed);
+    if (hasTimezone) {
+        return trimmed;
+    }
+    return `${trimmed}Z`;
+}
+
+function parseDateInput(value) {
+    if (!value) {
+        return null;
+    }
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : value;
+    }
+    const normalized = normalizeIsoString(value) ?? value;
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatRelativeTime(input, base = new Date()) {
+    const target = parseDateInput(input);
+    const comparison = parseDateInput(base) || new Date();
+
+    if (!target) {
+        return 'just now';
+    }
+
+    const diffSeconds = (target.getTime() - comparison.getTime()) / 1000;
+    const absSeconds = Math.abs(diffSeconds);
+
+    if (RELATIVE_TIME_FORMATTER) {
+        for (const threshold of RELATIVE_TIME_THRESHOLDS) {
+            if (absSeconds < threshold.limit) {
+                if (threshold.unit === 'second' && absSeconds < 9) {
+                    return diffSeconds <= 0 ? 'just now' : 'in a moment';
+                }
+                const value = Math.round(diffSeconds / threshold.divisor);
+                return RELATIVE_TIME_FORMATTER.format(value, threshold.unit);
             }
-            return `${hours}h ${minutes}m ago`;
         }
     }
-    if (seconds < 604800) {
-        const days = Math.floor(seconds / 86400);
-        const timePart = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        if (days === 1) {
-            return `Yesterday at ${timePart}`;
-        }
-        return `${days} days ago at ${timePart}`;
+
+    if (absSeconds < 9) {
+        return diffSeconds <= 0 ? 'just now' : 'in a moment';
     }
-    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    for (const definition of FALLBACK_RELATIVE_UNITS) {
+        if (absSeconds < definition.limit) {
+            const divisor = definition.divisor || 1;
+            const value = Math.round(absSeconds / divisor) || 1;
+            const suffix = value === 1 ? definition.unit : `${definition.unit}s`;
+            return diffSeconds <= 0 ? `${value} ${suffix} ago` : `in ${value} ${suffix}`;
+        }
+    }
+
+    const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+    return target.toLocaleString(undefined, options);
+}
+
+function formatAbsoluteTime(input, { includeTime = true } = {}) {
+    const target = parseDateInput(input);
+    if (!target) {
+        return '';
+    }
+    const options = includeTime
+        ? { dateStyle: 'medium', timeStyle: 'short' }
+        : { dateStyle: 'medium' };
+    return target.toLocaleString(undefined, options);
+}
+
+let relativeTimeIntervalId = null;
+
+function refreshRelativeTimeElements(root = document) {
+    if (!root || typeof root.querySelectorAll !== 'function') {
+        return;
+    }
+    const now = new Date();
+    const candidates = [];
+
+    if (root instanceof Element && root.matches('.relative-time[data-timestamp]')) {
+        candidates.push(root);
+    }
+
+    root.querySelectorAll('.relative-time[data-timestamp]').forEach(element => {
+        candidates.push(element);
+    });
+
+    candidates.forEach(element => {
+        const timestamp = element.getAttribute('data-timestamp');
+        if (!timestamp) {
+            return;
+        }
+        element.textContent = formatRelativeTime(timestamp, now);
+        if (!element.hasAttribute('title') || element.dataset.preserveRelativeTitle !== 'true') {
+            const absolute = formatAbsoluteTime(timestamp);
+            if (absolute) {
+                element.setAttribute('title', absolute);
+            }
+        }
+    });
+}
+
+function ensureRelativeTimeTicker() {
+    if (relativeTimeIntervalId) {
+        return;
+    }
+    relativeTimeIntervalId = window.setInterval(() => {
+        refreshRelativeTimeElements();
+    }, 60 * 1000);
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            refreshRelativeTimeElements();
+        }
+    });
+}
+
+function registerRelativeTimeContainer(root = document) {
+    refreshRelativeTimeElements(root);
+    ensureRelativeTimeTicker();
 }
 
 function debounce(func, wait) {
@@ -586,10 +937,10 @@ function highlightActiveNavigation() {
             return;
         }
 
-    const normalizedHref = href.replace(/\/+$/, '') || '/';
-    const isDropdownItem = link.closest('.dropdown-menu');
-    const hierarchicalMatch = normalizedHref !== '/' && path.startsWith(`${normalizedHref}/`);
-    const isActive = path === normalizedHref || hierarchicalMatch;
+        const normalizedHref = href.replace(/\/+$/, '') || '/';
+        const isDropdownItem = link.closest('.dropdown-menu');
+        const hierarchicalMatch = normalizedHref !== '/' && path.startsWith(`${normalizedHref}/`);
+        const isActive = path === normalizedHref || hierarchicalMatch;
 
         link.classList.toggle('active', isActive);
 
@@ -715,6 +1066,9 @@ document.addEventListener('DOMContentLoaded', function() {
     highlightActiveNavigation();
     initializeNavbarAutoHide();
     applyIconAccessibility(document);
+    initializeCheckboxEnhancements();
+    initializeBookmarkEnhancements();
+    registerRelativeTimeContainer(document);
 });
 
 window.addEventListener('storage', (event) => {
@@ -749,4 +1103,10 @@ window.addToCollection = addToCollection;
 window.exportResults = exportResults;
 window.formatDate = formatDate;
 window.formatRelativeTime = formatRelativeTime;
+window.formatAbsoluteTime = formatAbsoluteTime;
+window.refreshRelativeTimes = registerRelativeTimeContainer;
 window.debounce = debounce;
+window.enhanceCheckboxes = enhanceCheckboxes;
+window.initializeCheckboxEnhancements = initializeCheckboxEnhancements;
+window.enhanceBookmarkControls = enhanceBookmarkControls;
+window.initializeBookmarkEnhancements = initializeBookmarkEnhancements;

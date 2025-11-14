@@ -57,7 +57,7 @@ class Config:
     PERPLEXITY_API_KEY = os.getenv('PERPLEXITY_API_KEY')
     PERPLEXITY_SHARED_API_KEY = os.getenv('PERPLEXITY_SHARED_API_KEY')
     PERPLEXITY_API_BASE_URL = os.getenv('PERPLEXITY_API_BASE_URL', 'https://api.perplexity.ai')
-    PERPLEXITY_DEFAULT_MODEL = os.getenv('PERPLEXITY_DEFAULT_MODEL', 'pplx-70b-online')
+    PERPLEXITY_DEFAULT_MODEL = os.getenv('PERPLEXITY_DEFAULT_MODEL', 'sonar-pro')
     PERPLEXITY_VALIDATE_KEYS = os.getenv('PERPLEXITY_VALIDATE_KEYS', 'true').lower() not in {'0', 'false', 'no'}
     PERPLEXITY_VALIDATION_TIMEOUT = int(os.getenv('PERPLEXITY_VALIDATION_TIMEOUT', '8'))
     
@@ -104,6 +104,7 @@ class Config:
     SEARCH_TIMEOUT = 30
     ENABLE_AUTO_SUMMARIZATION = True
     ENABLE_CITATION_GENERATION = True
+    ENABLE_OFFLINE_SEARCH_FALLBACK = True
     
     # User Tiers
     USER_TIERS = {

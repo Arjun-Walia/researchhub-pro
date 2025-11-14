@@ -21,14 +21,14 @@
         <div class="metric-value" id="searchEngineCount">0</div>
         <p class="metric-summary" id="searchEngineSummary">Providers connected</p>
         <ul class="metric-list" id="searchEngineList">
-            <li><i class="fas fa-plug"></i><span>Connect Perplexity to activate semantic retrieval.</span></li>
+            <li><i class="fas fa-plug"></i><span>Connect Perplexity, Gemini, or SerpAPI to activate semantic retrieval.</span></li>
         </ul>
         <p class="metric-footnote" id="searchEngineFootnote">Linking multiple engines blends neural, keyword, and live web coverage.</p>
     </article>
     <article class="metric-card" id="searchAutomationCard">
         <span class="metric-pill"><i class="fas fa-robot"></i> AI automations</span>
         <div class="metric-value" id="searchAIHeadline">Locked</div>
-        <p class="metric-summary" id="searchAISummary">Connect OpenAI or Anthropic to unlock AI rewrites and summaries.</p>
+        <p class="metric-summary" id="searchAISummary">Connect OpenAI, Anthropic, or Gemini to unlock AI rewrites and summaries.</p>
         <ul class="metric-list" id="searchAIList">
             <li><i class="fas fa-pen-nib"></i><span>AI rewrites craft sharper queries.</span></li>
             <li><i class="fas fa-scroll"></i><span>Summaries condense each source.</span></li>
@@ -39,7 +39,7 @@
     <article class="metric-card" id="searchVelocityCard">
         <span class="metric-pill"><i class="fas fa-gauge-high"></i> Workflow</span>
         <div class="metric-value" id="searchSpeedHeadline">Locked</div>
-        <p class="metric-summary" id="searchSpeedSummary">Connect Perplexity to unlock instant semantic search.</p>
+    <p class="metric-summary" id="searchSpeedSummary">Connect Perplexity, Gemini, or SerpAPI to unlock instant semantic search.</p>
         <ul class="metric-list" id="searchSpeedList">
             <li><i class="fas fa-sliders"></i><span>Sort by relevance, impact, or recency.</span></li>
             <li><i class="fas fa-file-export"></i><span>Export citations in one click.</span></li>
@@ -59,6 +59,8 @@
     </div>
 
     <div id="searchCapabilityBanner" class="surface-subtle integration-capability-banner d-none" role="status" aria-live="polite"></div>
+
+    <div id="searchErrorBanner" class="alert d-none" role="status" aria-live="assertive"></div>
 
     <form id="searchForm" class="d-grid gap-3">
         <div class="search-bar">
@@ -117,13 +119,98 @@
         </div>
     </form>
 
-    <div id="searchLoading" class="empty-state fade-up d-none">
-        <div class="empty-illustration"><i class="fas fa-spinner fa-spin"></i></div>
-        <p class="mb-0 text-muted">Running semantic retrieval across trusted sources...</p>
+    <div id="searchLoading" class="search-loading-state fade-up d-none" role="status" aria-live="polite">
+        <div class="dot-spinner dot-spinner--lg" aria-hidden="true">
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+        </div>
+        <div class="loading-copy">
+            <p class="mb-1 text-muted">Running semantic retrieval across trusted sources…</p>
+            <p class="mb-0 text-muted small">Blending Perplexity, Gemini, and cached insights for the widest coverage.</p>
+        </div>
     </div>
 
     <div id="searchResults" class="search-results"></div>
 </div>
+
+    <div class="modal fade" id="collectionPickerModal" tabindex="-1" aria-labelledby="collectionPickerHeading" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="collectionPickerHeading">
+                        <span class="ui-bookmark ui-bookmark--inline ui-bookmark--static me-2" aria-hidden="true">
+                            <input type="checkbox" checked>
+                            <span class="bookmark">
+                                <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+                                    <path d="M27 4v27a1 1 0 0 1-1.625.781L16 24.281l-9.375 7.5A1 1 0 0 1 5 31V4a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4z"></path>
+                                </svg>
+                            </span>
+                        </span>
+                        Save to collection
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="collectionPickerForm" class="d-grid gap-3" novalidate>
+                        <div id="collectionPickerList" class="d-grid gap-2">
+                            <div class="text-muted small d-flex align-items-center gap-2">
+                                <span class="dot-spinner dot-spinner--xs dot-spinner--neutral" aria-hidden="true">
+                                    <span class="dot-spinner__dot"></span>
+                                    <span class="dot-spinner__dot"></span>
+                                    <span class="dot-spinner__dot"></span>
+                                    <span class="dot-spinner__dot"></span>
+                                    <span class="dot-spinner__dot"></span>
+                                    <span class="dot-spinner__dot"></span>
+                                    <span class="dot-spinner__dot"></span>
+                                    <span class="dot-spinner__dot"></span>
+                                </span>
+                                <span>Loading your collections…</span>
+                            </div>
+                        </div>
+                        <div id="collectionPickerEmpty" class="surface-subtle rounded p-3 d-none">
+                            <h6 class="mb-1">No collections yet</h6>
+                            <p class="mb-0 text-muted small">Create a collection below to organise this source.</p>
+                        </div>
+                        <div id="collectionPickerCreateWrapper" class="d-grid gap-2">
+                            <h6 class="mb-0">Create new collection</h6>
+                            <div>
+                                <label for="collectionPickerNewName" class="form-label">Collection name</label>
+                                <input type="text" class="form-control" id="collectionPickerNewName" placeholder="e.g., Market disruption watch">
+                            </div>
+                            <div>
+                                <label for="collectionPickerNewDescription" class="form-label">Description</label>
+                                <textarea class="form-control" id="collectionPickerNewDescription" rows="2" placeholder="Optional context for collaborators"></textarea>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="collectionPickerNewVisibility">
+                                <label class="form-check-label" for="collectionPickerNewVisibility">Share with workspace members</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="collectionPickerSubmit" form="collectionPickerForm">
+                        <span class="ui-bookmark ui-bookmark--inline ui-bookmark--static" aria-hidden="true">
+                            <input type="checkbox" checked>
+                            <span class="bookmark">
+                                <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+                                    <path d="M27 4v27a1 1 0 0 1-1.625.781L16 24.281l-9.375 7.5A1 1 0 0 1 5 31V4a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4z"></path>
+                                </svg>
+                            </span>
+                        </span>
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -142,6 +229,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchForm = document.getElementById('searchForm');
     const searchLoading = document.getElementById('searchLoading');
     const searchResults = document.getElementById('searchResults');
+    const searchErrorBanner = document.getElementById('searchErrorBanner');
     const sortChips = document.querySelectorAll('#sortChips .chip');
     const capabilityBanner = document.getElementById('searchCapabilityBanner');
     const searchSubmitButton = searchForm?.querySelector('button[type="submit"]');
@@ -160,11 +248,136 @@ document.addEventListener('DOMContentLoaded', function() {
         speedSummary: document.getElementById('searchSpeedSummary'),
         speedList: document.getElementById('searchSpeedList')
     };
+    const collectionPickerModalEl = document.getElementById('collectionPickerModal');
+    const collectionPickerForm = document.getElementById('collectionPickerForm');
+    const collectionPickerList = document.getElementById('collectionPickerList');
+    const collectionPickerEmpty = document.getElementById('collectionPickerEmpty');
+    const collectionPickerSubmit = document.getElementById('collectionPickerSubmit');
+    const collectionPickerNewName = document.getElementById('collectionPickerNewName');
+    const collectionPickerNewDescription = document.getElementById('collectionPickerNewDescription');
+    const collectionPickerNewVisibility = document.getElementById('collectionPickerNewVisibility');
+    const collectionPickerState = {
+        resultId: null,
+        collectionIndex: new Map()
+    };
+    const collectionPickerModal = collectionPickerModalEl && window.bootstrap
+        ? bootstrap.Modal.getOrCreateInstance(collectionPickerModalEl)
+        : null;
     const refreshIcons = (root) => {
         if (typeof window.refreshIconAccessibility === 'function') {
             window.refreshIconAccessibility(root || document);
         }
     };
+    const ENGINE_LABELS = {
+        openai: 'OpenAI',
+        anthropic: 'Anthropic',
+        perplexity: 'Perplexity',
+        gemini: 'Gemini',
+        serpapi: 'SerpAPI',
+        'offline-fallback': 'Offline preview'
+    };
+    let lastSearchPayload = null;
+    let lastRenderOptions = { includeSummary: true, sort: 'relevance' };
+    const BANNER_VARIANT_MAP = {
+        info: 'alert-info',
+        warning: 'alert-warning',
+        danger: 'alert-danger',
+        success: 'alert-success'
+    };
+
+    function clearSearchBanner() {
+        if (!searchErrorBanner) {
+            return;
+        }
+        searchErrorBanner.className = 'alert d-none';
+        searchErrorBanner.innerHTML = '';
+    }
+
+    function showSearchBanner(variant, title, message, actions = []) {
+        if (!searchErrorBanner) {
+            return;
+        }
+
+        const klass = BANNER_VARIANT_MAP[variant] || 'alert-info';
+        searchErrorBanner.className = `alert ${klass}`;
+        const actionsMarkup = actions.length
+            ? actions.map((action, index) => `
+                <button type="button" class="btn btn-sm ${action.buttonClass || 'btn-outline-dark'} ms-2" data-search-action-index="${index}">
+                    ${escapeHtml(action.label)}
+                </button>
+            `).join('')
+            : '';
+
+        searchErrorBanner.innerHTML = `
+            <div class="d-flex flex-column flex-lg-row gap-2 align-items-lg-center">
+                <div>
+                    <strong>${escapeHtml(title)}</strong>
+                    <p class="mb-0">${message}</p>
+                </div>
+                ${actionsMarkup ? `<div class="ms-lg-auto">${actionsMarkup}</div>` : ''}
+            </div>
+        `;
+
+        const buttons = searchErrorBanner.querySelectorAll('[data-search-action-index]');
+        buttons.forEach(button => {
+            const index = Number(button.getAttribute('data-search-action-index'));
+            const action = actions[index];
+            if (action && typeof action.onClick === 'function') {
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    action.onClick();
+                });
+            }
+        });
+
+        searchErrorBanner.classList.remove('d-none');
+        refreshIcons(searchErrorBanner);
+    }
+
+    function buildRetryActions() {
+        if (!lastSearchPayload) {
+            return [];
+        }
+        return [
+            {
+                label: 'Retry now',
+                buttonClass: 'btn-outline-dark',
+                onClick: () => executeSearch({ ...lastSearchPayload }, { ...lastRenderOptions })
+            }
+        ];
+    }
+
+    function renderEngineErrorList(errors) {
+        if (!Array.isArray(errors) || !errors.length) {
+            return '';
+        }
+        const items = errors.map(error => {
+            const providerLabel = formatProviderLabel(error.provider || 'Engine');
+            return `<li><strong>${escapeHtml(providerLabel)}</strong>: ${escapeHtml(error.message || 'Unavailable')}</li>`;
+        }).join('');
+        return `<ul class="mb-0 ps-3">${items}</ul>`;
+    }
+
+    function handleSearchFeedback(data) {
+        clearSearchBanner();
+        if (!data) {
+            return;
+        }
+
+        const errors = Array.isArray(data.engine_errors) ? data.engine_errors : [];
+        if (data.fallback) {
+            const reason = data.fallback_reason ? escapeHtml(data.fallback_reason) : 'Live engines were unavailable, so we generated preview insights.';
+            const errorList = renderEngineErrorList(errors);
+            const message = `${reason}${errorList ? errorList : ''}`;
+            showSearchBanner('warning', 'Showing preview insights', message, buildRetryActions());
+            return;
+        }
+
+        if (errors.length) {
+            const message = `Some engines could not respond. ${renderEngineErrorList(errors)}`;
+            showSearchBanner('info', 'Partial engine availability', message, buildRetryActions());
+        }
+    }
     const CAPABILITY_DEFAULTS = {
         powered_by: [],
         search_provider: null,
@@ -177,6 +390,171 @@ document.addEventListener('DOMContentLoaded', function() {
     let searchCapabilities = { ...CAPABILITY_DEFAULTS };
     let activeSort = 'relevance';
     let latestQueryId = null;
+
+    function resetCollectionPicker() {
+        collectionPickerState.resultId = null;
+        collectionPickerState.collectionIndex.clear();
+        if (collectionPickerForm) {
+            collectionPickerForm.reset();
+        }
+        if (collectionPickerList) {
+            collectionPickerList.innerHTML = '';
+        }
+        if (collectionPickerEmpty) {
+            collectionPickerEmpty.classList.add('d-none');
+        }
+    }
+
+    function renderCollectionPickerOption(collection) {
+        const docCount = Number(collection.result_count) || 0;
+        const docCountLabel = docCount.toLocaleString();
+        const title = escapeHtml(collection.title || 'Untitled collection');
+        const description = escapeHtml(collection.description || 'No description provided');
+        const updatedLabel = collection.updated_at ? formatRelativeTime(collection.updated_at) : 'moments ago';
+
+        return `
+            <div class="surface-subtle rounded p-3">
+                <div class="form-check d-flex align-items-start gap-3 mb-0">
+                    <input class="form-check-input mt-1" type="radio" name="collectionOption" id="collectionOption${collection.id}" value="${collection.id}">
+                    <label class="form-check-label w-100" for="collectionOption${collection.id}">
+                        <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                            <strong>${title}</strong>
+                            <span class="badge badge-neutral">${docCountLabel} saved</span>
+                        </div>
+                        <p class="mb-2 text-muted small">${description}</p>
+                        <span class="text-muted small"><i class="fas fa-clock me-1"></i> Updated ${updatedLabel}</span>
+                    </label>
+                </div>
+            </div>
+        `;
+    }
+
+    async function populateCollectionPicker() {
+        if (!collectionPickerList) {
+            return;
+        }
+
+        collectionPickerSubmit?.setAttribute('disabled', 'disabled');
+        collectionPickerList.innerHTML = `
+            <div class="text-muted small d-flex align-items-center gap-2">
+                <span class="dot-spinner dot-spinner--xs dot-spinner--neutral" aria-hidden="true">
+                    <span class="dot-spinner__dot"></span>
+                    <span class="dot-spinner__dot"></span>
+                    <span class="dot-spinner__dot"></span>
+                    <span class="dot-spinner__dot"></span>
+                    <span class="dot-spinner__dot"></span>
+                    <span class="dot-spinner__dot"></span>
+                    <span class="dot-spinner__dot"></span>
+                    <span class="dot-spinner__dot"></span>
+                </span>
+                <span>Loading your collections…</span>
+            </div>
+        `;
+        collectionPickerEmpty?.classList.add('d-none');
+        collectionPickerState.collectionIndex.clear();
+
+        try {
+            const response = await getCollections();
+            const collections = response?.collections || [];
+
+            if (collections.length) {
+                collections.forEach(collection => {
+                    if (collection && typeof collection.id !== 'undefined') {
+                        collectionPickerState.collectionIndex.set(collection.id, collection);
+                    }
+                });
+                collectionPickerList.innerHTML = collections.map(renderCollectionPickerOption).join('');
+                const firstRadio = collectionPickerList.querySelector('input[name="collectionOption"]');
+                if (firstRadio) {
+                    firstRadio.checked = true;
+                    firstRadio.focus({ preventScroll: true });
+                }
+            } else {
+                collectionPickerList.innerHTML = '';
+                collectionPickerEmpty?.classList.remove('d-none');
+            }
+        } catch (error) {
+            console.error('Failed to load collections for picker:', error);
+            collectionPickerList.innerHTML = `
+                <div class="alert alert-danger mb-0" role="alert">Unable to load collections. Please try again shortly.</div>
+            `;
+        } finally {
+            collectionPickerSubmit?.removeAttribute('disabled');
+            refreshIcons(collectionPickerList);
+        }
+
+        if (!collectionPickerState.collectionIndex.size) {
+            setTimeout(() => collectionPickerNewName?.focus({ preventScroll: true }), 150);
+        }
+    }
+
+    async function handleCollectionPickerSubmit(event) {
+        event.preventDefault();
+
+        if (!collectionPickerState.resultId) {
+            showAlert('Select a result before saving to a collection.', 'warning');
+            return;
+        }
+
+        const selectedRadio = collectionPickerForm?.querySelector('input[name="collectionOption"]:checked');
+        const newName = collectionPickerNewName?.value.trim();
+        const newDescription = collectionPickerNewDescription?.value.trim();
+        const isPublic = Boolean(collectionPickerNewVisibility?.checked);
+
+        if (!selectedRadio && !newName) {
+            showAlert('Choose an existing collection or provide a name for a new collection.', 'warning');
+            return;
+        }
+
+        collectionPickerSubmit?.setAttribute('disabled', 'disabled');
+        collectionPickerSubmit?.classList.add('disabled');
+
+        try {
+            let targetId = selectedRadio ? Number(selectedRadio.value) : null;
+            let targetCollection = targetId ? collectionPickerState.collectionIndex.get(targetId) : null;
+
+            if (!targetId) {
+                const response = await api.post('/collections', {
+                    title: newName,
+                    description: newDescription,
+                    is_public: isPublic
+                });
+                const newCollection = response?.collection;
+                if (!newCollection?.id) {
+                    throw new Error('Collection creation failed. Please try again.');
+                }
+                targetId = newCollection.id;
+                targetCollection = newCollection;
+                showAlert(`Collection “${newCollection.title}” created.`, 'success');
+            }
+
+            const addition = await addToCollection(targetId, collectionPickerState.resultId, { notify: false });
+            if (addition?.collection) {
+                targetCollection = addition.collection;
+            }
+
+            const collectionName = targetCollection?.title || 'collection';
+            showAlert(`Saved to “${collectionName}”.`, 'success');
+
+            try {
+                window.dispatchEvent(new CustomEvent('collections:updated', { detail: { collection: targetCollection } }));
+            } catch (dispatchError) {
+                console.warn('Unable to notify listeners about collection updates:', dispatchError);
+            }
+
+            if (collectionPickerModal) {
+                collectionPickerModal.hide();
+            }
+        } catch (error) {
+            console.error('Failed to save to collection:', error);
+            const isApiError = typeof ApiError !== 'undefined' && error instanceof ApiError;
+            const message = isApiError ? error.message : (error?.message || 'Unable to save to collection right now.');
+            showAlert(message, 'error');
+        } finally {
+            collectionPickerSubmit?.classList.remove('disabled');
+            collectionPickerSubmit?.removeAttribute('disabled');
+        }
+    }
 
     function mergeCapabilities(raw) {
         const source = raw || {};
@@ -194,12 +572,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const hasAI = searchCapabilities.has_premium_ai;
 
         if (searchSubmitButton) {
-            searchSubmitButton.disabled = !hasSearch;
-            searchSubmitButton.classList.toggle('disabled', !hasSearch);
+            searchSubmitButton.disabled = false;
+            searchSubmitButton.classList.remove('disabled');
             if (!hasSearch) {
-                searchSubmitButton.setAttribute('title', 'Connect Perplexity to enable AI search.');
+                searchSubmitButton.setAttribute('title', 'Offline preview mode active. Add Perplexity, Gemini, or SerpAPI to enable live search.');
+                searchSubmitButton.dataset.offlineFallback = 'true';
             } else {
                 searchSubmitButton.removeAttribute('title');
+                delete searchSubmitButton.dataset.offlineFallback;
+                delete searchSubmitButton.dataset.offlineNoticeAcknowledged;
             }
         }
 
@@ -212,7 +593,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (label) {
                 label.classList.toggle('text-muted', !hasAI);
                 if (!hasAI) {
-                    label.setAttribute('title', 'Link OpenAI or Anthropic to enable AI rewrites.');
+                    label.setAttribute('title', 'Link OpenAI, Anthropic, or Gemini to enable AI rewrites.');
                 } else {
                     label.removeAttribute('title');
                 }
@@ -228,7 +609,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (label) {
                 label.classList.toggle('text-muted', !hasAI);
                 if (!hasAI) {
-                    label.setAttribute('title', 'Link OpenAI or Anthropic to unlock AI summaries.');
+                    label.setAttribute('title', 'Link OpenAI, Anthropic, or Gemini to unlock AI summaries.');
                 } else {
                     label.removeAttribute('title');
                 }
@@ -260,7 +641,7 @@ document.addEventListener('DOMContentLoaded', function() {
         insightElements.engineSummary.textContent = uniqueProviders.length === 1 ? 'Provider connected' : 'Providers connected';
         const engineItems = uniqueProviders.length
             ? uniqueProviders.map(entry => `<li><i class="${entry.icon}"></i><span>${escapeHtml(entry.label)}</span></li>`)
-            : ['<li><i class="fas fa-plug"></i><span>Connect Perplexity to activate semantic retrieval.</span></li>'];
+            : ['<li><i class="fas fa-plug"></i><span>Connect Perplexity, Gemini, or SerpAPI to activate semantic retrieval.</span></li>'];
         insightElements.engineList.innerHTML = engineItems.join('');
         insightElements.engineFootnote.textContent = uniqueProviders.length
             ? 'Linked engines blend neural, keyword, and enrichment modes in a single query.'
@@ -270,7 +651,7 @@ document.addEventListener('DOMContentLoaded', function() {
         insightElements.aiHeadline.textContent = aiReady ? 'Ready' : 'Locked';
         insightElements.aiSummary.textContent = aiReady
             ? 'AI rewrites and summarization will enhance each result set.'
-            : 'Connect OpenAI or Anthropic to unlock AI rewrites and summaries.';
+            : 'Connect OpenAI, Anthropic, or Gemini to unlock AI rewrites and summaries.';
         const aiItems = [
             `<li><i class="${aiReady ? 'fas fa-check' : 'fas fa-ban'}"></i><span>AI rewrites ${aiReady ? 'enabled' : 'disabled'}.</span></li>`,
             `<li><i class="${aiReady ? 'fas fa-check' : 'fas fa-ban'}"></i><span>Summaries ${aiReady ? 'generated automatically' : 'unavailable'}.</span></li>`,
@@ -282,7 +663,7 @@ document.addEventListener('DOMContentLoaded', function() {
         insightElements.speedHeadline.textContent = searchReady ? 'Instant' : 'Locked';
         insightElements.speedSummary.textContent = searchReady
             ? 'Premium semantic search is ready. Queue queries back-to-back without throttling.'
-            : 'Connect Perplexity to unlock instant semantic search.';
+            : 'Connect Perplexity, Gemini, or SerpAPI to unlock instant semantic search.';
         const speedItems = [
             `<li><i class="fas fa-sliders"></i><span>${searchReady ? 'Advanced sorting filters stay responsive.' : 'Sorting presets unlock after connecting your engine.'}</span></li>`,
             '<li><i class="fas fa-file-export"></i><span>Export citations in one click.</span></li>',
@@ -332,10 +713,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const gaps = [];
         if (!searchCapabilities.has_premium_search) {
-            gaps.push('Connect Perplexity to run premium searches');
+            gaps.push('Add Perplexity, Gemini, or SerpAPI to run live searches');
         }
         if (!searchCapabilities.has_premium_ai) {
-            gaps.push('Add OpenAI or Anthropic for AI summaries');
+            gaps.push('Add OpenAI, Anthropic, or Gemini for AI summaries');
         }
         if (!searchCapabilities.has_enrichment) {
             gaps.push('Link SerpAPI for live web enrichment');
@@ -369,6 +750,36 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    async function executeSearch(payload, renderOptions = {}) {
+        if (!payload || !payload.query) {
+            return;
+        }
+
+        lastSearchPayload = { ...payload };
+        lastRenderOptions = { ...lastRenderOptions, ...renderOptions };
+
+        searchResults.innerHTML = '';
+        searchResults.dataset.hasResults = 'false';
+        searchLoading.classList.remove('d-none');
+        clearSearchBanner();
+
+        try {
+            const response = await api.post('/research/search', payload);
+            latestQueryId = response.query_id;
+            displayResults(response, lastRenderOptions);
+        } catch (error) {
+            console.error('Search failed:', error);
+            const primaryMessage = error instanceof ApiError ? escapeHtml(error.message) : 'Search failed. Please try again.';
+            let detailMessage = '';
+            if (error instanceof ApiError && error.payload?.error && error.payload.error !== error.message) {
+                detailMessage = `<div class="small text-muted mt-1">${escapeHtml(error.payload.error)}</div>`;
+            }
+            showSearchBanner('danger', 'Search failed', `${primaryMessage}${detailMessage}`, buildRetryActions());
+        } finally {
+            searchLoading.classList.add('d-none');
+        }
+    }
+
     sortChips.forEach(chip => {
         chip.addEventListener('click', () => {
             sortChips.forEach(c => c.classList.remove('active'));
@@ -388,43 +799,32 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (!searchCapabilities.has_premium_search) {
-            showAlert('Connect your Perplexity API key in Settings > Integrations to unlock AI search.', 'warning');
-            return;
-        }
-
         const query = document.getElementById('searchQuery').value.trim();
         if (!query) {
             showAlert('Enter a search query to continue.', 'warning');
             return;
         }
 
-    const numResults = parseInt(document.getElementById('numResults').value, 10);
-    const searchType = document.getElementById('searchType').value;
-    const enhanceQuery = !!enhanceCheckbox?.checked;
-    const includeSummary = !!includeSummaryCheckbox?.checked;
-
-        searchResults.innerHTML = '';
-        searchResults.dataset.hasResults = 'false';
-        searchLoading.classList.remove('d-none');
-
-        try {
-            const payload = {
-                query,
-                num_results: numResults,
-                search_type: searchType,
-                enhance_query: enhanceQuery
-            };
-
-            const response = await api.post('/research/search', payload);
-            latestQueryId = response.query_id;
-            displayResults(response, { includeSummary, sort: activeSort });
-        } catch (error) {
-            console.error('Search failed:', error);
-            showAlert(error.message || 'Search failed. Please try again.', 'error');
-        } finally {
-            searchLoading.classList.add('d-none');
+        const missingLiveSearch = !searchCapabilities.has_premium_search;
+        if (missingLiveSearch && searchSubmitButton && !searchSubmitButton.dataset.offlineNoticeAcknowledged) {
+            showAlert('No live search engines are connected yet. We will generate offline previews until you add Perplexity, Gemini, or SerpAPI in Settings.', 'info');
+            searchSubmitButton.dataset.offlineNoticeAcknowledged = 'true';
         }
+
+        const numResults = parseInt(document.getElementById('numResults').value, 10);
+        const searchType = document.getElementById('searchType').value;
+        const enhanceQuery = !!enhanceCheckbox?.checked;
+        const includeSummary = !!includeSummaryCheckbox?.checked;
+
+        const payload = {
+            query,
+            num_results: numResults,
+            search_type: searchType,
+            enhance_query: enhanceQuery
+        };
+
+        lastRenderOptions = { includeSummary, sort: activeSort };
+        executeSearch(payload, lastRenderOptions);
     });
 
     function reorderResults(sort) {
@@ -482,14 +882,17 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
 
-        const cards = data.results.map((result, index) => {
+    const cards = data.results.map((result, index) => {
             const date = result.published_date ? new Date(result.published_date).toISOString() : '';
             const displayDate = result.published_date ? new Date(result.published_date).toLocaleDateString() : 'Date unavailable';
-            const score = result.score ? (result.score * 100).toFixed(1) : null;
-            const snippet = result.text ? `${result.text.slice(0, 320)}${result.text.length > 320 ? '…' : ''}` : '';
+            const scoreValue = typeof result.score === 'number' ? result.score : (typeof result.relevance_score === 'number' ? result.relevance_score : null);
+            const scoreDisplay = scoreValue !== null ? (scoreValue * 100).toFixed(1) : null;
+            const snippetSource = result.snippet || result.text || '';
+            const snippet = snippetSource ? `${snippetSource.slice(0, 320)}${snippetSource.length > 320 ? '…' : ''}` : '';
+            const resultId = typeof result.id === 'undefined' ? '' : result.id;
 
             return `
-                <div class="surface-card result-card" data-index="${index}" data-score="${score || 0}" data-published="${date}">
+                <div class="surface-card result-card" data-index="${index}" data-score="${scoreValue ?? 0}" data-published="${date}" data-result-id="${result.id || ''}">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
                             <a href="${result.url}" target="_blank" rel="noopener" class="fw-semibold">
@@ -500,7 +903,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="result-meta">
                         <span><i class="fas fa-link"></i> ${escapeHtml(result.url || 'Unavailable')}</span>
-                        ${score ? `<span><i class="fas fa-signal"></i> Confidence ${score}%</span>` : ''}
+                        ${scoreDisplay ? `<span><i class="fas fa-signal"></i> Confidence ${scoreDisplay}%</span>` : ''}
                     </div>
                     ${snippet ? `<p class="mb-3">${escapeHtml(snippet)}</p>` : ''}
                     ${includeSummary && result.summary ? `
@@ -514,9 +917,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <i class="fas fa-arrow-up-right-from-square"></i> Open source
                         </a>
                         <div class="action-group">
-                            <button class="btn-icon" type="button" onclick="addToCollectionPrompt(${result.id || 'null'})" title="Save to collection">
-                                <i class="fas fa-bookmark"></i>
-                            </button>
+                            <button class="btn-icon" type="button" data-bookmark-control data-bookmark-action="collection" data-bookmark-toggle="momentary" data-bookmark-label="Save to collection" data-result-id="${resultId}" title="Save to collection"></button>
                             <button class="btn-icon" type="button" onclick="copyCitation('${btoa(result.url || '')}')" title="Copy citation">
                                 <i class="fas fa-quote-right"></i>
                             </button>
@@ -528,13 +929,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         searchResults.innerHTML = `
             ${resultsHeader}
-            <div id="resultCardsContainer" class="d-grid gap-3 mt-3">
+            <div id="resultCardsContainer" class="d-grid gap-3 mt-3 results-scroll-region">
                 ${cards}
             </div>
         `;
 
         reorderResults(options.sort);
         refreshIcons(searchResults);
+        if (typeof window.enhanceBookmarkControls === 'function') {
+            window.enhanceBookmarkControls(searchResults);
+        }
     }
 
     window.exportResults = function(queryId, format = 'pdf') {
@@ -546,11 +950,49 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     window.addToCollectionPrompt = function(resultId) {
-        if (!resultId) {
+        const normalizedId = Number(resultId);
+        if (!normalizedId || Number.isNaN(normalizedId)) {
             showAlert('This source cannot be saved yet.', 'warning');
             return;
         }
-        showAlert('Open the collection drawer from the sidebar to save this result.', 'info');
+
+        if (!localStorage.getItem('access_token')) {
+            showAlert('Sign in to save results to a collection.', 'warning');
+            return;
+        }
+
+        if (!collectionPickerModal) {
+            showAlert('Collections are unavailable right now.', 'error');
+            return;
+        }
+
+        collectionPickerState.resultId = normalizedId;
+        collectionPickerState.collectionIndex.clear();
+
+        if (collectionPickerForm) {
+            collectionPickerForm.reset();
+        }
+        if (collectionPickerList) {
+            collectionPickerList.innerHTML = `
+                <div class="text-muted small d-flex align-items-center gap-2">
+                    <span class="dot-spinner dot-spinner--xs dot-spinner--neutral" aria-hidden="true">
+                        <span class="dot-spinner__dot"></span>
+                        <span class="dot-spinner__dot"></span>
+                        <span class="dot-spinner__dot"></span>
+                        <span class="dot-spinner__dot"></span>
+                        <span class="dot-spinner__dot"></span>
+                        <span class="dot-spinner__dot"></span>
+                        <span class="dot-spinner__dot"></span>
+                        <span class="dot-spinner__dot"></span>
+                    </span>
+                    <span>Loading your collections…</span>
+                </div>
+            `;
+        }
+        collectionPickerEmpty?.classList.add('d-none');
+
+        collectionPickerModal.show();
+        populateCollectionPicker();
     };
 
     window.copyCitation = function(encodedUrl) {
@@ -567,6 +1009,14 @@ document.addEventListener('DOMContentLoaded', function() {
             showAlert('Unable to copy citation right now.', 'error');
         }
     };
+
+    if (collectionPickerForm) {
+        collectionPickerForm.addEventListener('submit', handleCollectionPickerSubmit);
+    }
+
+    if (collectionPickerModalEl) {
+        collectionPickerModalEl.addEventListener('hidden.bs.modal', resetCollectionPicker);
+    }
 
     refreshIcons(document);
 });

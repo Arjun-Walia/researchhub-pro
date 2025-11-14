@@ -50,7 +50,16 @@
                 <span class="section-label">Collections</span>
                 <div class="metric-value" id="totalCollectionsValue" data-counter>0</div>
             </div>
-            <span class="metric-icon"><i class="fas fa-bookmark"></i></span>
+            <span class="metric-icon">
+                <span class="ui-bookmark ui-bookmark--static" aria-hidden="true">
+                    <input type="checkbox" checked>
+                    <span class="bookmark">
+                        <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+                            <path d="M27 4v27a1 1 0 0 1-1.625.781L16 24.281l-9.375 7.5A1 1 0 0 1 5 31V4a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4z"></path>
+                        </svg>
+                    </span>
+                </span>
+            </span>
         </div>
         <div class="metric-trend">Curated dossiers stay synced with your latest findings.</div>
     </div>
@@ -66,7 +75,7 @@
     </div>
 </div>
 
-<div class="row g-4">
+<div class="row g-4 align-items-stretch">
     <div class="col-12 col-xl-8">
         <div class="surface-card elevated analytics-card h-100">
             <div class="d-flex justify-content-between align-items-center">
@@ -77,7 +86,13 @@
                 </div>
                 <span class="badge badge-accent badge-pulse">Live</span>
             </div>
-            <div class="chart-placeholder" id="dashboardChartPlaceholder">Interactive charts integrate with your analytics service.</div>
+            <div class="engagement-chart" aria-live="polite">
+                <canvas id="engagementChart" aria-label="Weekly engagement breakdown" role="img"></canvas>
+                <div class="chart-empty" id="engagementChartEmpty">
+                    <i class="fas fa-chart-simple"></i>
+                    <p class="mb-0">Collecting enough activity data to plot your first insights.</p>
+                </div>
+            </div>
             <div class="quick-action-grid">
                 <a href="/collections" class="quick-action-card">
                     <div class="d-flex justify-content-between align-items-start">
@@ -112,8 +127,8 @@
             </div>
         </div>
     </div>
-    <div class="col-12 col-xl-4">
-        <div class="surface-card feed-card mb-4">
+    <div class="col-12 col-xl-4 d-flex flex-column gap-4">
+        <div class="surface-card feed-card">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
                     <span class="section-label">Notifications</span>
@@ -131,16 +146,25 @@
                 </div>
             </div>
         </div>
-        <div class="surface-card feed-card">
+    <div class="surface-card feed-card flex-grow-1">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
                     <span class="section-label">Recent activity</span>
                     <h4 class="mb-0">Live stream</h4>
                 </div>
             </div>
-            <div id="activityFeed">
+            <div id="activityFeed" class="scrollable-feed">
                 <div class="text-center text-muted py-4">
-                    <i class="fas fa-spinner fa-spin mb-2"></i>
+                    <div class="dot-spinner dot-spinner--lg dot-spinner--neutral mb-2" aria-hidden="true">
+                        <div class="dot-spinner__dot"></div>
+                        <div class="dot-spinner__dot"></div>
+                        <div class="dot-spinner__dot"></div>
+                        <div class="dot-spinner__dot"></div>
+                        <div class="dot-spinner__dot"></div>
+                        <div class="dot-spinner__dot"></div>
+                        <div class="dot-spinner__dot"></div>
+                        <div class="dot-spinner__dot"></div>
+                    </div>
                     <p class="mb-0">Loading activity...</p>
                 </div>
             </div>
@@ -185,5 +209,6 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}

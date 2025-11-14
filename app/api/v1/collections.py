@@ -207,3 +207,85 @@ def manage_collection_result(collection_id, result_id):
     except Exception as e:
         logger.error(f"Manage collection result failed: {str(e)}")
         return jsonify({'error': 'Operation failed'}), 500
+
+
+@bp.route('/<int:collection_id>/export', methods=['GET'])
+@jwt_required()
+def export_collection(collection_id):
+    """Export collection contents."""
+    try:
+        user_id = int(get_jwt_identity())
+        format_type = (request.args.get('format') or 'json').lower()
+
+        if format_type != 'json':
+            return jsonify({'error': f'Unsupported format: {format_type}'}), 400
+
+        collection = Collection.query.filter_by(
+            id=collection_id,
+            user_id=user_id
+        ).first()
+
+        if not collection:
+            return jsonify({'error': 'Collection not found'}), 404
+
+        export_payload = {
+            'collection': collection.to_dict(include_results=False),
+            'results': [r.to_dict() for r in collection.results]
+        }
+
+        response = jsonify(export_payload)
+        response.headers['Content-Disposition'] = f'attachment; filename=collection_{collection_id}.json'
+        return response
+
+    except Exception as e:
+        logger.error(f"Export collection failed: {str(e)}")
+        return jsonify({'error': 'Failed to export collection'}), 500
+
+
+@bp.route('/<int:collection_id>/duplicate', methods=['POST'])
+@jwt_required()
+def duplicate_collection(collection_id):
+    """Duplicate an existing collection."""
+    try:
+        user_id = int(get_jwt_identity())
+        source = Collection.query.filter_by(
+            id=collection_id,
+            user_id=user_id
+        ).first()
+
+        if not source:
+            return jsonify({'error': 'Collection not found'}), 404
+
+        data = request.get_json() or {}
+        new_title = (data.get('title') or f"{source.title} (Copy)")[:200]
+        new_description = data.get('description', source.description)
+        is_public = data.get('is_public', source.is_public)
+
+        duplicate = Collection(
+            user_id=user_id,
+            project_id=source.project_id,
+            title=new_title,
+            description=new_description,
+            is_public=is_public
+        )
+        duplicate.save()
+
+        for result in source.results:
+            duplicate.results.append(result)
+        duplicate.save()
+
+        analytics.track_activity(
+            user_id=user_id,
+            activity_type='collection_duplicated',
+            resource_type='collection',
+            resource_id=duplicate.id
+        )
+
+        return jsonify({
+            'message': 'Collection duplicated',
+            'collection': duplicate.to_dict()
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Duplicate collection failed: {str(e)}")
+        return jsonify({'error': 'Failed to duplicate collection'}), 500

@@ -16,6 +16,18 @@ let dashboardData = {
     capabilities: {}
 };
 
+let engagementChartInstance = null;
+
+const ACTIVITY_COLOR_MAP = {
+    search: '--color-accent',
+    login: '--color-info',
+    export: '--color-positive',
+    project_created: '--color-warning',
+    collection_created: '--color-critical'
+};
+
+const ACTIVITY_FALLBACK_PALETTE = ['#297EF6', '#38BDF8', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+
 const persistUserLocally = typeof window.setStoredUser === 'function'
     ? window.setStoredUser
     : (user) => {
@@ -25,6 +37,8 @@ const persistUserLocally = typeof window.setStoredUser === 'function'
         }
         localStorage.setItem('user', JSON.stringify(user));
     };
+
+const EXCLUDED_ACTIVITY_TYPES = new Set(['registration']);
 
 const notifyIconRefresh = (root) => {
     if (typeof window.refreshIconAccessibility === 'function') {
@@ -146,14 +160,14 @@ function renderNotifications() {
         items.push({
             icon: 'fas fa-plug',
             title: 'Unlock AI search.',
-            message: 'Connect your Perplexity API key in Settings > Integrations.',
+            message: 'Connect a Perplexity, Gemini, or SerpAPI key in Settings > Integrations.',
             badge: { label: 'Action needed', type: 'badge-neutral' }
         });
     } else if (!capabilities.has_premium_ai) {
         items.push({
             icon: 'fas fa-robot',
             title: 'Boost answers with AI models.',
-            message: 'Link OpenAI or Anthropic for summaries and drafting support.',
+            message: 'Link OpenAI, Anthropic, or Gemini for summaries and drafting support.',
             badge: { label: 'Optional', type: 'badge-neutral' }
         });
     }
@@ -217,6 +231,153 @@ function renderNotifications() {
         </div>
     `).join('');
     notifyIconRefresh(container);
+}
+
+function getCssVariable(prop, fallback = '') {
+    const styles = window.getComputedStyle(document.body || document.documentElement);
+    const value = styles.getPropertyValue(prop);
+    return value ? value.trim() : fallback;
+}
+
+function resolveActivityColor(activityKey, index) {
+    const palette = Object.values(ACTIVITY_COLOR_MAP);
+    const cssVar = ACTIVITY_COLOR_MAP[activityKey] || palette[index % palette.length];
+    const colorValue = cssVar ? getCssVariable(cssVar) : '';
+    if (colorValue) {
+        return colorValue;
+    }
+    return ACTIVITY_FALLBACK_PALETTE[index % ACTIVITY_FALLBACK_PALETTE.length];
+}
+
+function renderEngagementChart(breakdown, periodDays) {
+    const canvas = document.getElementById('engagementChart');
+    const emptyState = document.getElementById('engagementChartEmpty');
+
+    if (!canvas) {
+        return;
+    }
+
+    const hasData = breakdown && Object.keys(breakdown).length > 0;
+
+    if (!hasData || typeof Chart === 'undefined') {
+        if (engagementChartInstance) {
+            engagementChartInstance.destroy();
+            engagementChartInstance = null;
+        }
+        canvas.classList.add('d-none');
+        if (emptyState) {
+            emptyState.classList.remove('d-none');
+        }
+        return;
+    }
+
+    const entries = Object.entries(breakdown)
+        .filter(([type, value]) => !EXCLUDED_ACTIVITY_TYPES.has(type) && value && Number.isFinite(Number(value)))
+        .map(([type, value]) => ({ type, count: Number(value) }))
+        .sort((a, b) => b.count - a.count);
+
+    if (!entries.length) {
+        if (engagementChartInstance) {
+            engagementChartInstance.destroy();
+            engagementChartInstance = null;
+        }
+        canvas.classList.add('d-none');
+        if (emptyState) {
+            emptyState.classList.remove('d-none');
+        }
+        return;
+    }
+
+    const labels = entries.map(entry => formatActivityType(entry.type));
+    const dataPoints = entries.map(entry => entry.count);
+    const backgroundColors = entries.map((entry, index) => resolveActivityColor(entry.type, index));
+    const borderRadius = 18;
+
+    if (engagementChartInstance) {
+        engagementChartInstance.destroy();
+    }
+
+    const ctx = canvas.getContext('2d');
+    const textColor = getCssVariable('--color-text-soft', '#94A3B8');
+    const gridColor = getCssVariable('--color-border-subtle', 'rgba(148, 163, 184, 0.3)');
+    const accentColor = getCssVariable('--color-accent', '#297EF6');
+    const periodLabel = periodDays ? `Last ${periodDays} days` : 'Recent activity';
+
+    engagementChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: periodLabel,
+                data: dataPoints,
+                backgroundColor: backgroundColors,
+                borderWidth: 0,
+                borderRadius,
+                maxBarThickness: 32,
+                barPercentage: 0.8,
+                categoryPercentage: 0.6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            animation: {
+                duration: 600,
+                easing: 'easeOutQuart'
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: getCssVariable('--color-surface-primary', '#111827'),
+                    titleColor: textColor,
+                    bodyColor: '#FFFFFF',
+                    borderColor: accentColor,
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: {
+                        label(context) {
+                            const value = context.parsed.x || context.parsed.y || 0;
+                            return `${value.toLocaleString()} event${value === 1 ? '' : 's'}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: {
+                        color: gridColor,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: textColor,
+                        precision: 0,
+                        callback(value) {
+                            return Number(value).toLocaleString();
+                        }
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: textColor
+                    }
+                }
+            }
+        }
+    });
+
+    canvas.classList.remove('d-none');
+    if (emptyState) {
+        emptyState.classList.add('d-none');
+    }
 }
 
 // Load dashboard data
@@ -319,7 +480,7 @@ async function loadRecentSearches() {
                     ${query.enhanced_query ? '<span class="badge badge-accent ms-2">AI enhanced</span>' : ''}
                 </td>
                 <td>${(query.total_results || 0).toLocaleString()} results</td>
-                <td>${formatRelativeTime(query.created_at)}</td>
+                <td><span class="relative-time" data-timestamp="${query.created_at}">${formatRelativeTime(query.created_at)}</span></td>
                 <td>
                     <div class="action-group">
                         <button class="btn-icon" type="button" onclick="viewQuery(${query.id})" title="Open query">
@@ -333,6 +494,9 @@ async function loadRecentSearches() {
             </tr>
         `).join('');
         notifyIconRefresh(tbody);
+        if (typeof window.refreshRelativeTimes === 'function') {
+            window.refreshRelativeTimes(tbody);
+        }
 
     } catch (error) {
         console.error('Failed to load recent searches:', error);
@@ -345,6 +509,7 @@ async function loadActivity() {
         const activityFeed = document.getElementById('activityFeed');
 
         if (!activityFeed) {
+            renderEngagementChart(data.activity_summary?.activity_breakdown, data.period_days);
             return;
         }
 
@@ -355,10 +520,12 @@ async function loadActivity() {
                     <p class="mb-0 text-muted">No recent events. Your activity stream will appear here.</p>
                 </div>
             `;
+            renderEngagementChart(null);
             return;
         }
 
-        const activities = Object.entries(data.activity_summary.activity_breakdown);
+        const activities = Object.entries(data.activity_summary.activity_breakdown)
+            .sort((a, b) => b[1] - a[1]);
 
         if (!activities.length) {
             activityFeed.innerHTML = `
@@ -367,6 +534,7 @@ async function loadActivity() {
                     <p class="mb-0 text-muted">No recent activity logged. Run searches or manage projects to see updates.</p>
                 </div>
             `;
+            renderEngagementChart(null);
             return;
         }
 
@@ -384,9 +552,11 @@ async function loadActivity() {
             `;
         }).join('');
         notifyIconRefresh(activityFeed);
+        renderEngagementChart(data.activity_summary.activity_breakdown, data.period_days);
 
     } catch (error) {
         console.error('Failed to load activity:', error);
+        renderEngagementChart(null);
     }
 }
 

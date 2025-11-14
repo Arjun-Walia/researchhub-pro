@@ -174,6 +174,21 @@ def ensure_schema_upgrades(app):
             if 'serpapi_key_last_validated_at' not in column_names:
                 datetime_type = 'TIMESTAMP' if engine.dialect.name != 'sqlite' else 'TEXT'
                 connection.execute(text(f'ALTER TABLE users ADD COLUMN serpapi_key_last_validated_at {datetime_type}'))
+            if 'gemini_api_key' not in column_names:
+                connection.execute(text('ALTER TABLE users ADD COLUMN gemini_api_key VARCHAR(255)'))
+            if 'gemini_key_last_validated_at' not in column_names:
+                datetime_type = 'TIMESTAMP' if engine.dialect.name != 'sqlite' else 'TEXT'
+                connection.execute(text(f'ALTER TABLE users ADD COLUMN gemini_key_last_validated_at {datetime_type}'))
+
+        if 'researchproject' in inspector.get_table_names():
+            project_columns = {col['name'] for col in inspector.get_columns('researchproject')}
+            with engine.begin() as connection:
+                if 'collaborators' not in project_columns:
+                    json_type = 'JSON' if engine.dialect.name not in ('sqlite',) else 'TEXT'
+                    connection.execute(text(f'ALTER TABLE researchproject ADD COLUMN collaborators {json_type}'))
+                if 'timeline' not in project_columns:
+                    json_type = 'JSON' if engine.dialect.name not in ('sqlite',) else 'TEXT'
+                    connection.execute(text(f'ALTER TABLE researchproject ADD COLUMN timeline {json_type}'))
     except Exception as exc:
         app.logger.warning(f"Schema upgrade skipped: {exc}")
 

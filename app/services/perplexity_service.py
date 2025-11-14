@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 class PerplexityValidationError(Exception):
     """Raised when a Perplexity API key cannot be validated."""
 
+    def __init__(self, message: str, reason: str = 'validation_failed'):
+        super().__init__(message)
+        self.reason = reason
+
 
 @dataclass
 class PerplexityValidationResult:
@@ -65,17 +69,17 @@ class PerplexityService:
             response = requests.get(endpoint, headers=headers, timeout=self.timeout)
         except requests.exceptions.Timeout as exc:
             logger.warning('Perplexity validation timed out: %s', exc)
-            raise PerplexityValidationError('Perplexity validation timed out. Please try again.') from exc
+            raise PerplexityValidationError('Perplexity validation timed out. Please try again.', reason='network') from exc
         except requests.exceptions.RequestException as exc:
             logger.error('Perplexity validation request failed: %s', exc)
-            raise PerplexityValidationError('Unable to reach Perplexity. Check your network and try again.') from exc
+            raise PerplexityValidationError('Unable to reach Perplexity. Check your network and try again.', reason='network') from exc
 
         if response.status_code == 401:
-            raise PerplexityValidationError('Perplexity rejected the API key. Double-check and try again.')
+            raise PerplexityValidationError('Perplexity rejected the API key. Double-check and try again.', reason='invalid_credentials')
 
         if response.status_code >= 400:
             logger.error('Perplexity responded with %s: %s', response.status_code, response.text[:200])
-            raise PerplexityValidationError('Perplexity could not validate the key right now. Please retry shortly.')
+            raise PerplexityValidationError('Perplexity could not validate the key right now. Please retry shortly.', reason='api_error')
 
         try:
             payload = response.json()

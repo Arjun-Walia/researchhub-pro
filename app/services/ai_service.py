@@ -1,9 +1,8 @@
-"""
-AI Service for query enhancement and content analysis using OpenAI/Anthropic.
-"""
+"""AI Service for query enhancement and content analysis using OpenAI/Anthropic."""
 import logging
 from typing import List, Dict, Optional, Any
-import openai
+
+from openai import OpenAI
 import requests
 from anthropic import Anthropic
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -41,8 +40,7 @@ class AIService:
         self.perplexity_base_url = (perplexity_base_url or 'https://api.perplexity.ai').rstrip('/')
         self.perplexity_timeout = 12
         
-        if openai_key:
-            openai.api_key = openai_key
+        self.openai_client = OpenAI(api_key=openai_key) if openai_key else None
         
         if anthropic_key:
             self.anthropic = Anthropic(api_key=anthropic_key)
@@ -76,14 +74,16 @@ class AIService:
                 if perplexity_query:
                     return perplexity_query
 
-            if self.openai_key:
-                response = openai.ChatCompletion.create(
-                    model="gpt-4",
+            if self.openai_client:
+                completion = self.openai_client.chat.completions.create(
+                    model="gpt-4o-mini",
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.7,
                     max_tokens=150
                 )
-                return response.choices[0].message.content.strip()
+                content = completion.choices[0].message.content if completion.choices else None
+                if content:
+                    return content.strip()
             
             return query  # Fallback to original query
             
@@ -120,14 +120,16 @@ class AIService:
             
             Summary:"""
             
-            if self.openai_key:
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
+            if self.openai_client:
+                completion = self.openai_client.chat.completions.create(
+                    model="gpt-4o-mini",
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.5,
                     max_tokens=max_length * 2
                 )
-                return response.choices[0].message.content.strip()
+                content = completion.choices[0].message.content if completion.choices else None
+                if content:
+                    return content.strip()
             
             return text[:500] + "..."  # Fallback truncation
             
@@ -154,16 +156,17 @@ class AIService:
             
             Return as a numbered list."""
             
-            if self.openai_key:
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
+            if self.openai_client:
+                completion = self.openai_client.chat.completions.create(
+                    model="gpt-4o-mini",
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.5,
                     max_tokens=500
                 )
-                
+
                 # Parse numbered list
-                content = response.choices[0].message.content.strip()
+                content_raw = completion.choices[0].message.content if completion.choices else None
+                content = content_raw.strip() if content_raw else ""
                 points = []
                 for line in content.split('\n'):
                     line = line.strip()
@@ -205,16 +208,17 @@ class AIService:
             
             Return as JSON with these exact keys: positivity, objectivity, formality, complexity"""
             
-            if self.openai_key:
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
+            if self.openai_client:
+                completion = self.openai_client.chat.completions.create(
+                    model="gpt-4o-mini",
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.3,
                     max_tokens=150
                 )
-                
+
                 import json
-                result = json.loads(response.choices[0].message.content.strip())
+                raw = completion.choices[0].message.content if completion.choices else '{}'
+                result = json.loads((raw or '{}').strip())
                 return result
             
             # Default neutral scores
@@ -250,16 +254,17 @@ class AIService:
             
             Return as JSON with these keys: people, organizations, locations, topics"""
             
-            if self.openai_key:
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
+            if self.openai_client:
+                completion = self.openai_client.chat.completions.create(
+                    model="gpt-4o-mini",
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.3,
                     max_tokens=400
                 )
-                
+
                 import json
-                result = json.loads(response.choices[0].message.content.strip())
+                raw = completion.choices[0].message.content if completion.choices else '{}'
+                result = json.loads((raw or '{}').strip())
                 return result
             
             return {'people': [], 'organizations': [], 'locations': [], 'topics': []}
@@ -308,14 +313,16 @@ class AIService:
             
             Keep it professional and concise."""
             
-            if self.openai_key:
-                response = openai.ChatCompletion.create(
-                    model="gpt-4",
+            if self.openai_client:
+                completion = self.openai_client.chat.completions.create(
+                    model="gpt-4o",
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.7,
                     max_tokens=2000
                 )
-                return response.choices[0].message.content.strip()
+                content = completion.choices[0].message.content if completion.choices else None
+                if content:
+                    return content.strip()
             
             # Fallback simple report
             report = f"# Research Report: {query}\n\n"
@@ -349,15 +356,16 @@ class AIService:
             
             Return only the queries, one per line, without numbering."""
             
-            if self.openai_key:
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
+            if self.openai_client:
+                completion = self.openai_client.chat.completions.create(
+                    model="gpt-4o-mini",
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.8,
                     max_tokens=200
                 )
-                
-                suggestions = response.choices[0].message.content.strip().split('\n')
+
+                raw = completion.choices[0].message.content if completion.choices else ''
+                suggestions = (raw or '').strip().split('\n')
                 return [s.strip() for s in suggestions if s.strip()][:num_suggestions]
             
             return []
@@ -395,16 +403,17 @@ class AIService:
             
             Return as JSON with keys: credibility, relevance, recency, depth, overall"""
             
-            if self.openai_key:
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
+            if self.openai_client:
+                completion = self.openai_client.chat.completions.create(
+                    model="gpt-4o-mini",
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.3,
                     max_tokens=150
                 )
-                
+
                 import json
-                return json.loads(response.choices[0].message.content.strip())
+                raw = completion.choices[0].message.content if completion.choices else '{}'
+                return json.loads((raw or '{}').strip())
             
             # Default moderate scores
             return {
@@ -426,7 +435,7 @@ class AIService:
 
         endpoint = f"{self.perplexity_base_url}/chat/completions"
         payload = {
-            "model": "llama-3.1-70b-instruct",
+            "model": "sonar-pro",
             "messages": [
                 {
                     "role": "system",

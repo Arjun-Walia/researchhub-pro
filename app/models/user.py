@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import secrets
 from typing import Optional
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import Column, String, Boolean, Enum, Integer, DateTime
+from sqlalchemy import Column, String, Boolean, Enum, Integer, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 import enum
 
@@ -67,6 +67,8 @@ class User(BaseModel):
     anthropic_key_last_validated_at = Column(DateTime)
     serpapi_api_key = Column(String(255))
     serpapi_key_last_validated_at = Column(DateTime)
+    gemini_api_key = Column(String(255))
+    gemini_key_last_validated_at = Column(DateTime)
     
     # Security
     failed_login_attempts = Column(Integer, default=0)
@@ -82,6 +84,7 @@ class User(BaseModel):
     activities = relationship('UserActivity', back_populates='user', cascade='all, delete-orphan')
     integration_events = relationship('IntegrationEvent', back_populates='user', cascade='all, delete-orphan', order_by='IntegrationEvent.created_at.desc()')
     oauth_connections = relationship('OAuthConnection', back_populates='user', cascade='all, delete-orphan')
+    email_verification_tokens = relationship('EmailVerificationToken', back_populates='user', cascade='all, delete-orphan', order_by='EmailVerificationToken.created_at.desc()')
     
     def set_password(self, password):
         """Hash and set password."""
@@ -200,6 +203,27 @@ class User(BaseModel):
         self.password_reset_token = None
         self.password_reset_expires = None
 
+    def require_email_verification(self):
+        """Mark user as pending email verification."""
+        self.is_verified = False
+        self.email_verified_at = None
+
+    def mark_email_verified(self):
+        """Mark user email as verified."""
+        self.is_verified = True
+        self.email_verified_at = datetime.utcnow()
+
+    def generate_email_verification_token(self, expires_in=86400):
+        """Generate a new email verification token and persist it."""
+        token = secrets.token_urlsafe(48)
+        verification = EmailVerificationToken(
+            user_id=self.id,
+            token=token,
+            expires_at=datetime.utcnow() + timedelta(seconds=expires_in)
+        )
+        verification.save()
+        return verification
+
     def to_dict(self, include_sensitive=False):
         """Convert user to dictionary."""
         data = {
@@ -226,7 +250,7 @@ class User(BaseModel):
             })
 
         integrations = {}
-        for provider in ('perplexity', 'openai', 'anthropic', 'serpapi'):
+        for provider in ('perplexity', 'openai', 'anthropic', 'serpapi', 'gemini'):
             stamp_attr = f'{provider}_key_last_validated_at'
             stamp = getattr(self, stamp_attr, None)
             integrations[provider] = {
@@ -246,8 +270,45 @@ class User(BaseModel):
         for connection in self.oauth_connections:
             oauth_payload[connection.provider] = connection.to_dict()
         data['oauth_connections'] = oauth_payload
+
+        data['is_verified'] = self.is_verified
+        data['email_verified_at'] = self.email_verified_at.isoformat() if self.email_verified_at else None
         
         return data
     
     def __repr__(self):
         return f'<User {self.username}>'
+
+
+class EmailVerificationToken(BaseModel):
+    """Verification token for confirming user email addresses."""
+
+    __tablename__ = 'emailverificationtoken'
+
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    token = Column(String(255), nullable=False, unique=True, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    consumed_at = Column(DateTime)
+
+    user = relationship('User', back_populates='email_verification_tokens')
+
+    @property
+    def is_expired(self) -> bool:
+        return self.expires_at < datetime.utcnow()
+
+    @property
+    def is_consumed(self) -> bool:
+        return self.consumed_at is not None
+
+    def mark_consumed(self):
+        """Flag token as used."""
+        self.consumed_at = datetime.utcnow()
+        self.save()
+
+    @classmethod
+    def find_valid_token(cls, token: str):
+        """Lookup a token that hasn't expired or been consumed."""
+        candidate = cls.query.filter_by(token=token).first()
+        if not candidate or candidate.is_expired or candidate.is_consumed:
+            return None
+        return candidate

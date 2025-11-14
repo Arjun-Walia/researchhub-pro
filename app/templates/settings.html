@@ -23,7 +23,18 @@
 </div>
 
 <div id="settingsLoading" class="empty-state fade-up">
-    <div class="empty-illustration"><i class="fas fa-spinner fa-spin"></i></div>
+    <div class="empty-illustration">
+        <div class="dot-spinner dot-spinner--lg" aria-hidden="true">
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+            <div class="dot-spinner__dot"></div>
+        </div>
+    </div>
     <p class="mb-0 text-muted">Loading your account preferences...</p>
 </div>
 
@@ -90,8 +101,8 @@
                             </div>
                             <div>
                                 <label for="settingsEmail" class="form-label">Email</label>
-                                <input type="email" class="form-control" id="settingsEmail" disabled aria-disabled="true">
-                                <div class="form-text">Need to update? Contact <a href="mailto:hello@researchhub.pro">support</a>.</div>
+                                <input type="email" class="form-control" id="settingsEmail" autocomplete="email">
+                                <div class="form-text">Updating your email triggers a verification link.</div>
                             </div>
                             <div>
                                 <label for="settingsOrganization" class="form-label">Organization</label>
@@ -110,7 +121,19 @@
                         <div class="d-flex justify-content-end">
                             <button type="submit" class="btn btn-primary" id="generalSaveBtn">
                                 <span class="default-label"><i class="fas fa-check me-1"></i>Save updates</span>
-                                <span class="spinner-label d-none"><i class="fas fa-spinner fa-spin me-2"></i>Saving...</span>
+                                <span class="spinner-label d-none">
+                                    <span class="dot-spinner dot-spinner--sm dot-spinner--inverted" aria-hidden="true">
+                                        <span class="dot-spinner__dot"></span>
+                                        <span class="dot-spinner__dot"></span>
+                                        <span class="dot-spinner__dot"></span>
+                                        <span class="dot-spinner__dot"></span>
+                                        <span class="dot-spinner__dot"></span>
+                                        <span class="dot-spinner__dot"></span>
+                                        <span class="dot-spinner__dot"></span>
+                                        <span class="dot-spinner__dot"></span>
+                                    </span>
+                                    <span>Saving...</span>
+                                </span>
                             </button>
                         </div>
                     </form>
@@ -159,7 +182,19 @@
                     <div class="d-flex justify-content-end">
                         <button type="submit" class="btn btn-secondary" id="passwordSaveBtn">
                             <span class="default-label"><i class="fas fa-key me-1"></i>Update password</span>
-                            <span class="spinner-label d-none"><i class="fas fa-spinner fa-spin me-2"></i>Updating...</span>
+                            <span class="spinner-label d-none">
+                                <span class="dot-spinner dot-spinner--sm" aria-hidden="true">
+                                    <span class="dot-spinner__dot"></span>
+                                    <span class="dot-spinner__dot"></span>
+                                    <span class="dot-spinner__dot"></span>
+                                    <span class="dot-spinner__dot"></span>
+                                    <span class="dot-spinner__dot"></span>
+                                    <span class="dot-spinner__dot"></span>
+                                    <span class="dot-spinner__dot"></span>
+                                    <span class="dot-spinner__dot"></span>
+                                </span>
+                                <span>Updating...</span>
+                            </span>
                         </button>
                     </div>
                 </form>
@@ -255,7 +290,7 @@
                     <div class="surface-subtle p-3 rounded integration-card" data-provider="perplexity" data-field="perplexity_api_key">
                         <div class="integration-header d-flex flex-wrap justify-content-between align-items-start gap-3">
                             <div class="integration-brand d-flex align-items-start gap-3">
-                                <span class="integration-icon integration-icon-perplexity" aria-hidden="true"><i class="fas fa-sparkles"></i></span>
+                                <span class="integration-icon integration-icon-perplexity" aria-hidden="true"><i class="fas fa-magic"></i></span>
                                 <div>
                                     <div class="d-flex align-items-center gap-2">
                                         <strong>Perplexity API</strong>
@@ -273,10 +308,11 @@
                             <span class="integration-meta-label">Last validated</span>
                             <span class="integration-meta" data-meta="last-validated">Never</span>
                             <span class="integration-meta" data-meta="models_detected"></span>
+                            <span class="integration-meta text-warning d-none" data-meta="notice"></span>
                         </div>
                         <form class="integration-form d-grid gap-3 mt-3" data-provider="perplexity" novalidate>
                             <div class="input-group">
-                                <input type="password" class="form-control integration-input" data-provider="perplexity" placeholder="pk-xxxxxxxx" autocomplete="off">
+                                <input type="password" class="form-control integration-input" data-provider="perplexity" placeholder="pk-xxxxxxxx" autocomplete="off" data-stored-placeholder="Perplexity key stored securely">
                                 <button class="btn btn-outline-secondary integration-visibility" type="button" data-provider="perplexity" aria-label="Toggle Perplexity key visibility"><i class="fas fa-eye"></i></button>
                             </div>
                             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
@@ -287,13 +323,6 @@
                                 </div>
                             </div>
                         </form>
-                        <div class="integration-activity mt-3" data-provider="perplexity">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h6 class="integration-activity-title mb-0">Recent activity</h6>
-                                <span class="badge badge-ghost" data-provider="perplexity" data-meta="activity-count">0 events</span>
-                            </div>
-                            <ul class="integration-log list-unstyled mb-0" aria-live="polite"></ul>
-                        </div>
                     </div>
 
                     <div class="surface-subtle p-3 rounded integration-card" data-provider="openai" data-field="openai_api_key">
@@ -317,10 +346,11 @@
                             <span class="integration-meta-label">Last validated</span>
                             <span class="integration-meta" data-meta="last-validated">Never</span>
                             <span class="integration-meta" data-meta="model_count"></span>
+                            <span class="integration-meta text-warning d-none" data-meta="notice"></span>
                         </div>
                         <form class="integration-form d-grid gap-3 mt-3" data-provider="openai" novalidate>
                             <div class="input-group">
-                                <input type="password" class="form-control integration-input" data-provider="openai" placeholder="sk-xxxxxxxx" autocomplete="off">
+                                <input type="password" class="form-control integration-input" data-provider="openai" placeholder="sk-xxxxxxxx" autocomplete="off" data-stored-placeholder="OpenAI key stored securely">
                                 <button class="btn btn-outline-secondary integration-visibility" type="button" data-provider="openai" aria-label="Toggle OpenAI key visibility"><i class="fas fa-eye"></i></button>
                             </div>
                             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
@@ -331,13 +361,6 @@
                                 </div>
                             </div>
                         </form>
-                        <div class="integration-activity mt-3" data-provider="openai">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h6 class="integration-activity-title mb-0">Recent activity</h6>
-                                <span class="badge badge-ghost" data-provider="openai" data-meta="activity-count">0 events</span>
-                            </div>
-                            <ul class="integration-log list-unstyled mb-0" aria-live="polite"></ul>
-                        </div>
                     </div>
 
                     <div class="surface-subtle p-3 rounded integration-card" data-provider="anthropic" data-field="anthropic_api_key">
@@ -361,10 +384,11 @@
                             <span class="integration-meta-label">Last validated</span>
                             <span class="integration-meta" data-meta="last-validated">Never</span>
                             <span class="integration-meta" data-meta="model_count"></span>
+                            <span class="integration-meta text-warning d-none" data-meta="notice"></span>
                         </div>
                         <form class="integration-form d-grid gap-3 mt-3" data-provider="anthropic" novalidate>
                             <div class="input-group">
-                                <input type="password" class="form-control integration-input" data-provider="anthropic" placeholder="anthropic-key" autocomplete="off">
+                                <input type="password" class="form-control integration-input" data-provider="anthropic" placeholder="anthropic-key" autocomplete="off" data-stored-placeholder="Anthropic key stored securely">
                                 <button class="btn btn-outline-secondary integration-visibility" type="button" data-provider="anthropic" aria-label="Toggle Anthropic key visibility"><i class="fas fa-eye"></i></button>
                             </div>
                             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
@@ -375,13 +399,45 @@
                                 </div>
                             </div>
                         </form>
-                        <div class="integration-activity mt-3" data-provider="anthropic">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h6 class="integration-activity-title mb-0">Recent activity</h6>
-                                <span class="badge badge-ghost" data-provider="anthropic" data-meta="activity-count">0 events</span>
+                    </div>
+
+                    <div class="surface-subtle p-3 rounded integration-card" data-provider="gemini" data-field="gemini_api_key">
+                        <div class="integration-header d-flex flex-wrap justify-content-between align-items-start gap-3">
+                            <div class="integration-brand d-flex align-items-start gap-3">
+                                <span class="integration-icon integration-icon-gemini" aria-hidden="true"><i class="fas fa-sun"></i></span>
+                                <div>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <strong>Gemini</strong>
+                                        <span class="badge badge-ghost integration-capability" data-capability="ai-models">Models ready</span>
+                                        <span class="badge badge-ghost integration-capability" data-capability="search">Search ready</span>
+                                    </div>
+                                    <p class="mb-0 text-muted">Blend Gemini for drafting and analytics</p>
+                                </div>
                             </div>
-                            <ul class="integration-log list-unstyled mb-0" aria-live="polite"></ul>
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="btn btn-ghost btn-sm integration-help" type="button" data-provider="gemini" aria-label="Gemini help"><i class="fas fa-circle-info"></i></button>
+                                <span class="badge badge-neutral integration-status">Status: Not linked</span>
+                            </div>
                         </div>
+                        <div class="integration-meta-row text-muted small">
+                            <span class="integration-meta-label">Last validated</span>
+                            <span class="integration-meta" data-meta="last-validated">Never</span>
+                            <span class="integration-meta" data-meta="models_detected"></span>
+                            <span class="integration-meta text-warning d-none" data-meta="notice"></span>
+                        </div>
+                        <form class="integration-form d-grid gap-3 mt-3" data-provider="gemini" novalidate>
+                            <div class="input-group">
+                                <input type="password" class="form-control integration-input" data-provider="gemini" placeholder="AIzaSy..." autocomplete="off" data-stored-placeholder="Gemini key stored securely">
+                                <button class="btn btn-outline-secondary integration-visibility" type="button" data-provider="gemini" aria-label="Toggle Gemini key visibility"><i class="fas fa-eye"></i></button>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                                <div class="settings-help-text">Validated against Google AI Studio before encryption.</div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="submit" class="btn btn-primary integration-save" data-provider="gemini"><i class="fas fa-check me-1"></i>Verify &amp; Save</button>
+                                    <button type="button" class="btn btn-outline-danger integration-remove" data-provider="gemini"><i class="fas fa-trash me-1"></i>Remove</button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
 
                     <div class="surface-subtle p-3 rounded integration-card" data-provider="serpapi" data-field="serpapi_api_key">
@@ -406,10 +462,11 @@
                             <span class="integration-meta" data-meta="last-validated">Never</span>
                             <span class="integration-meta" data-meta="plan"></span>
                             <span class="integration-meta" data-meta="requests_left"></span>
+                            <span class="integration-meta text-warning d-none" data-meta="notice"></span>
                         </div>
                         <form class="integration-form d-grid gap-3 mt-3" data-provider="serpapi" novalidate>
                             <div class="input-group">
-                                <input type="password" class="form-control integration-input" data-provider="serpapi" placeholder="serpapi-key" autocomplete="off">
+                                <input type="password" class="form-control integration-input" data-provider="serpapi" placeholder="serpapi-key" autocomplete="off" data-stored-placeholder="SerpAPI key stored securely">
                                 <button class="btn btn-outline-secondary integration-visibility" type="button" data-provider="serpapi" aria-label="Toggle SerpAPI key visibility"><i class="fas fa-eye"></i></button>
                             </div>
                             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
@@ -420,13 +477,6 @@
                                 </div>
                             </div>
                         </form>
-                        <div class="integration-activity mt-3" data-provider="serpapi">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h6 class="integration-activity-title mb-0">Recent activity</h6>
-                                <span class="badge badge-ghost" data-provider="serpapi" data-meta="activity-count">0 events</span>
-                            </div>
-                            <ul class="integration-log list-unstyled mb-0" aria-live="polite"></ul>
-                        </div>
                     </div>
                 </div>
             </section>
@@ -828,7 +878,7 @@
             field: 'perplexity_api_key',
             label: 'Perplexity',
             requiresValidation: true,
-            icon: 'fas fa-sparkles',
+            icon: 'fas fa-magic',
             help: 'Perplexity powers premium neural search, reranking, and live models. Keys are verified against the models endpoint before being encrypted.',
             capabilities: ['search', 'ai-assist']
         },
@@ -845,6 +895,14 @@
             icon: 'fas fa-feather',
             help: 'Route long-form analysis and safety-focused workflows through Claude models. Validation checks the model registry.',
             capabilities: ['ai-models']
+        },
+        gemini: {
+            field: 'gemini_api_key',
+            label: 'Gemini',
+            icon: 'fas fa-sun',
+            help: 'Unlock Gemini 1.5 Pro, Flash, and experimental research tooling. We validate keys against Google AI Studio before encrypting them.',
+            capabilities: ['ai-models', 'search'],
+            requiresValidation: true
         },
         serpapi: {
             field: 'serpapi_api_key',
@@ -887,19 +945,26 @@
                 metaFields[metaKey] = element;
             });
 
+            const input = card.querySelector('.integration-input');
+            const defaultPlaceholder = input ? input.getAttribute('placeholder') || '' : '';
+            const storedPlaceholder = input ? input.getAttribute('data-stored-placeholder') || 'Stored securely' : 'Stored securely';
+            if (input) {
+                input.setAttribute('data-default-placeholder', defaultPlaceholder);
+            }
+
             integrationRegistry[provider] = {
                 card,
                 field: card.getAttribute('data-field'),
                 form: card.querySelector('.integration-form'),
-                input: card.querySelector('.integration-input'),
+                input,
+                defaultPlaceholder,
+                storedPlaceholder,
                 saveBtn: card.querySelector('.integration-save'),
                 removeBtn: card.querySelector('.integration-remove'),
                 visibilityBtn: card.querySelector('.integration-visibility'),
                 statusBadge: card.querySelector('.integration-status'),
                 lastValidated: metaFields['last-validated'] || null,
                 metaFields,
-                logList: card.querySelector('.integration-log'),
-                activityBadge: card.querySelector('[data-meta="activity-count"]'),
                 helpBtn: card.querySelector('.integration-help'),
                 capabilityBadges: card.querySelectorAll('.integration-capability')
             };
@@ -1017,6 +1082,7 @@
         const payload = {
             first_name: document.getElementById('settingsFirstName').value.trim(),
             last_name: document.getElementById('settingsLastName').value.trim(),
+            email: document.getElementById('settingsEmail').value.trim(),
             organization: document.getElementById('settingsOrganization').value.trim(),
             bio: document.getElementById('settingsBio').value.trim()
         };
@@ -1037,6 +1103,9 @@
                 localStorage.removeItem(STORAGE_KEYS.phone);
             }
             showAlert('Profile updated successfully.', 'success');
+            if (response.verification_required) {
+                showAlert('We sent a fresh verification email. Please confirm your address to unlock premium features.', 'info');
+            }
         } catch (error) {
             console.error('Profile update failed:', error);
             showAlert(error.message || 'Failed to update profile.', 'error');
@@ -1132,32 +1201,65 @@
         return null;
     }
 
-    function extractIntegrationEvents(provider, payload) {
-        if (!payload) {
-            return null;
-        }
-        if (payload.integration_events?.[provider]) {
-            return payload.integration_events[provider];
-        }
-        if (payload.user?.integration_events?.[provider]) {
-            return payload.user.integration_events[provider];
-        }
-        return null;
-    }
-
     function updateIntegrationStatus(provider, status) {
         const nodes = integrationRegistry[provider];
         if (!nodes) return;
 
         const connected = status?.connected;
+        const statusFlag = status?.status || (connected ? 'linked' : 'not_configured');
         if (nodes.statusBadge) {
-            nodes.statusBadge.textContent = connected ? 'Status: Connected' : 'Status: Not linked';
-            nodes.statusBadge.className = `badge ${connected ? 'badge-positive' : 'badge-neutral'} integration-status`;
+            let label = 'Status: Not linked';
+            let badgeClass = 'badge-neutral';
+            if (connected) {
+                if (statusFlag === 'pending') {
+                    label = 'Status: Pending verification';
+                    badgeClass = 'badge-warning';
+                } else {
+                    label = 'Status: Connected';
+                    badgeClass = 'badge-positive';
+                }
+            }
+            nodes.statusBadge.textContent = label;
+            nodes.statusBadge.className = `badge ${badgeClass} integration-status`;
         }
 
         if (nodes.lastValidated) {
             const timestamp = status?.last_validated_at;
-            nodes.lastValidated.textContent = timestamp ? formatRelativeTime(timestamp) : 'Never';
+            const normalizedStamp = normalizeTimestamp(timestamp);
+            if (normalizedStamp) {
+                nodes.lastValidated.textContent = formatRelativeTime(normalizedStamp);
+                nodes.lastValidated.dataset.timestamp = normalizedStamp;
+                nodes.lastValidated.classList.add('relative-time');
+                if (typeof window.refreshRelativeTimes === 'function') {
+                    window.refreshRelativeTimes(nodes.lastValidated);
+                }
+            } else if (connected && statusFlag === 'pending') {
+                nodes.lastValidated.textContent = 'Validation pending';
+                nodes.lastValidated.classList.remove('relative-time');
+                nodes.lastValidated.removeAttribute('data-timestamp');
+                nodes.lastValidated.removeAttribute('title');
+            } else {
+                nodes.lastValidated.textContent = 'Never';
+                nodes.lastValidated.classList.remove('relative-time');
+                nodes.lastValidated.removeAttribute('data-timestamp');
+                nodes.lastValidated.removeAttribute('title');
+            }
+        }
+
+        if (nodes.input) {
+            const defaultPlaceholder = nodes.defaultPlaceholder || nodes.input.getAttribute('data-default-placeholder') || '';
+            const storedPlaceholder = nodes.storedPlaceholder || nodes.input.getAttribute('data-stored-placeholder') || 'Stored securely';
+            if (connected) {
+                nodes.input.value = '';
+                nodes.input.placeholder = storedPlaceholder;
+                nodes.input.setAttribute('data-stored', 'true');
+                nodes.input.classList.add('integration-input-stored');
+            } else {
+                nodes.input.value = '';
+                nodes.input.placeholder = defaultPlaceholder;
+                nodes.input.removeAttribute('data-stored');
+                nodes.input.classList.remove('integration-input-stored');
+            }
         }
 
         updateIntegrationMetadata(provider, status);
@@ -1178,9 +1280,15 @@
             if (value === undefined || value === null || value === '') {
                 element.textContent = '';
                 element.classList.add('d-none');
+                element.classList.remove('text-warning');
             } else {
                 element.textContent = formatMetadataValue(key, value);
                 element.classList.remove('d-none');
+                if (key === 'notice') {
+                    element.classList.add('text-warning');
+                } else {
+                    element.classList.remove('text-warning');
+                }
             }
         });
     }
@@ -1198,7 +1306,27 @@
         if (key === 'model_count' || key === 'models_detected') {
             return `${value} models`; 
         }
+        if (key === 'notice') {
+            return value;
+        }
         return String(value);
+    }
+
+    function normalizeTimestamp(value) {
+        if (!value) {
+            return null;
+        }
+        if (value instanceof Date) {
+            return value.toISOString();
+        }
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (!trimmed) {
+                return null;
+            }
+            return /([zZ]|[+-]\d{2}:?\d{2})$/.test(trimmed) ? trimmed : `${trimmed}Z`;
+        }
+        return null;
     }
 
     function applyIntegrationCapabilityBadges(provider, status) {
@@ -1212,40 +1340,6 @@
                 badge.classList.add('d-none');
             }
         });
-    }
-
-    function updateIntegrationEvents(provider, events) {
-        const nodes = integrationRegistry[provider];
-        if (!nodes?.logList) return;
-
-        const list = nodes.logList;
-        const timeline = Array.isArray(events) ? events.slice(0, 6) : [];
-        if (!timeline.length) {
-            list.innerHTML = '<li class="text-muted small">No activity logged yet.</li>';
-        } else {
-            list.innerHTML = timeline.map(renderIntegrationEvent).join('');
-        }
-
-        if (nodes.activityBadge) {
-            const count = Array.isArray(events) ? events.length : 0;
-            nodes.activityBadge.textContent = count ? `${count} event${count === 1 ? '' : 's'}` : '0 events';
-        }
-    }
-
-    function renderIntegrationEvent(event) {
-        const created = event?.created_at ? formatRelativeTime(event.created_at) : 'moments ago';
-        const status = event?.status || 'info';
-        const icon = status === 'success' ? 'fa-circle-check' : status === 'error' ? 'fa-circle-exclamation' : 'fa-circle-info';
-        const message = event?.message || 'Activity recorded';
-        return `
-            <li class="integration-log-item ${status}">
-                <span class="integration-log-icon"><i class="fas ${icon}"></i></span>
-                <div>
-                    <div class="integration-log-message">${message}</div>
-                    <div class="integration-log-meta">${created}</div>
-                </div>
-            </li>
-        `;
     }
 
     function persistUserState(user) {
@@ -1265,10 +1359,16 @@
     function notifyIntegrationChange(provider, status, options = {}) {
         const label = formatProviderLabel(provider);
         const connected = status?.connected;
+        const statusFlag = status?.status || (connected ? 'linked' : 'not_configured');
+        const notice = status?.metadata?.notice || status?.notice;
 
         if (provider === 'perplexity') {
             if (options.removed || status?.status === 'removed' || !connected) {
                 showAlert(`${label} key removed.`, 'info');
+                return;
+            }
+            if (statusFlag === 'pending') {
+                showAlert(`${label} key saved. Validation pending${notice ? `: ${notice}` : '.'}`, 'warning');
                 return;
             }
             if (status?.just_linked) {
@@ -1282,7 +1382,11 @@
         if (options.removed || !connected) {
             showAlert(`${label} key removed.`, 'info');
         } else if (connected) {
-            showAlert(`${label} key saved.`, 'success');
+            if (statusFlag === 'pending') {
+                showAlert(`${label} key saved. Validation pending${notice ? `: ${notice}` : '.'}`, 'warning');
+            } else {
+                showAlert(`${label} key saved.`, 'success');
+            }
         }
     }
 
@@ -1312,16 +1416,12 @@
             }
 
             const status = extractIntegrationStatus(provider, response) || state.user?.integrations?.[provider] || { connected: true };
-            const events = extractIntegrationEvents(provider, response) || state.user?.integration_events?.[provider] || [];
 
             if (state.user) {
                 state.user.integrations = state.user.integrations || {};
                 state.user.integrations[provider] = { ...state.user.integrations[provider], ...status };
-                state.user.integration_events = state.user.integration_events || {};
-                state.user.integration_events[provider] = events;
             }
             updateIntegrationStatus(provider, status);
-            updateIntegrationEvents(provider, events);
             notifyIntegrationChange(provider, status);
         } catch (error) {
             console.error(`${provider} key update failed:`, error);
@@ -1353,15 +1453,11 @@
                 persistUserState(response.user);
             }
             const status = extractIntegrationStatus(provider, response) || state.user?.integrations?.[provider] || { connected: false, status: 'not_configured' };
-            const events = extractIntegrationEvents(provider, response) || state.user?.integration_events?.[provider] || [];
             if (state.user) {
                 state.user.integrations = state.user.integrations || {};
                 state.user.integrations[provider] = { ...state.user.integrations[provider], ...status };
-                state.user.integration_events = state.user.integration_events || {};
-                state.user.integration_events[provider] = events;
             }
             updateIntegrationStatus(provider, status);
-            updateIntegrationEvents(provider, events);
             notifyIntegrationChange(provider, status, { removed: true });
         } catch (error) {
             console.error(`${provider} key removal failed:`, error);
@@ -1483,47 +1579,78 @@
                 <td>${entry.device}</td>
                 <td>${entry.location}</td>
                 <td>${entry.ip}</td>
-                <td>${entry.lastSeen}</td>
+                <td>${entry.lastSeenAt ? `<span class="relative-time" data-timestamp="${entry.lastSeenAt}">${formatRelativeTime(entry.lastSeenAt)}</span>` : entry.lastSeen || '—'}</td>
                 <td><span class="badge ${entry.status === 'Active' ? 'badge-positive' : 'badge-neutral'}">${entry.status}</span></td>
             </tr>
         `).join('');
         populateAuthorizedDevices(history);
+        if (typeof window.refreshRelativeTimes === 'function') {
+            window.refreshRelativeTimes(els.signInHistoryBody);
+        }
     }
 
     function buildSignInHistory(user) {
         const storedHistory = loadJSON(STORAGE_KEYS.signIns, []);
         const now = new Date();
         const tz = Intl.DateTimeFormat('en-US', { timeZoneName: 'short' }).format(now);
+        const currentIso = user.last_login_at && !Number.isNaN(new Date(user.last_login_at).getTime())
+            ? new Date(user.last_login_at).toISOString()
+            : new Date().toISOString();
         const currentEntry = {
             device: 'This device',
             location: `Approx. ${tz}`,
             ip: 'n/a',
-            lastSeen: user.last_login_at ? formatRelativeTime(user.last_login_at) : 'just now',
+            lastSeenAt: currentIso,
+            lastSeen: formatRelativeTime(currentIso),
             status: 'Active'
         };
 
         if (!storedHistory.length) {
-            const fallback = [
-                {
-                    device: 'MacBook Pro - Chrome',
-                    location: 'San Francisco, US',
-                    ip: '198.51.100.5',
-                    lastSeen: formatRelativeTime(new Date(Date.now() - 86400000).toISOString()),
-                    status: 'Signed out'
-                },
-                {
-                    device: 'iPad Pro - Safari',
-                    location: 'New York, US',
-                    ip: '203.0.113.17',
-                    lastSeen: formatRelativeTime(new Date(Date.now() - 172800000).toISOString()),
-                    status: 'Signed out'
-                }
-            ];
+            const fallback = [];
+            const firstIso = new Date(Date.now() - 86400000).toISOString();
+            fallback.push({
+                device: 'MacBook Pro - Chrome',
+                location: 'San Francisco, US',
+                ip: '198.51.100.5',
+                lastSeenAt: firstIso,
+                lastSeen: formatRelativeTime(firstIso),
+                status: 'Signed out'
+            });
+
+            const secondIso = new Date(Date.now() - 172800000).toISOString();
+            fallback.push({
+                device: 'iPad Pro - Safari',
+                location: 'New York, US',
+                ip: '203.0.113.17',
+                lastSeenAt: secondIso,
+                lastSeen: formatRelativeTime(secondIso),
+                status: 'Signed out'
+            });
             saveJSON(STORAGE_KEYS.signIns, fallback);
             return [currentEntry, ...fallback];
         }
 
-        return [currentEntry, ...storedHistory];
+        const normalizedHistory = storedHistory.map(record => {
+            const iso = record.lastSeenAt && !Number.isNaN(new Date(record.lastSeenAt).getTime())
+                ? new Date(record.lastSeenAt).toISOString()
+                : (record.lastSeen && !Number.isNaN(new Date(record.lastSeen).getTime()) ? new Date(record.lastSeen).toISOString() : null);
+            if (iso) {
+                return {
+                    ...record,
+                    lastSeenAt: iso,
+                    lastSeen: formatRelativeTime(iso)
+                };
+            }
+            return {
+                ...record,
+                lastSeenAt: null,
+                lastSeen: record.lastSeen || '—'
+            };
+        });
+
+        saveJSON(STORAGE_KEYS.signIns, normalizedHistory);
+
+        return [currentEntry, ...normalizedHistory];
     }
 
     function populateAuthorizedDevices(history) {
@@ -1531,7 +1658,7 @@
             <div class="device-row">
                 <div>
                     <strong>${entry.device}</strong>
-                    <p class="mb-0 small text-muted">${entry.location} &bull; ${entry.lastSeen}</p>
+                    <p class="mb-0 small text-muted">${entry.location} &bull; ${entry.lastSeenAt ? `<span class="relative-time" data-timestamp="${entry.lastSeenAt}">${formatRelativeTime(entry.lastSeenAt)}</span>` : entry.lastSeen || '—'}</p>
                 </div>
                 <button class="btn btn-ghost btn-sm" type="button" ${entry.status === 'Active' ? 'disabled' : ''} data-device="${entry.device}">Revoke</button>
             </div>
@@ -1546,6 +1673,10 @@
                 showAlert('Remote revocation is on the roadmap. For urgent revokes, contact support.', 'info');
             });
         });
+
+        if (typeof window.refreshRelativeTimes === 'function') {
+            window.refreshRelativeTimes(els.authorizedDevices);
+        }
     }
 
     function populateIntegrations(user) {

@@ -1,16 +1,24 @@
 """Research API endpoints."""
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import logging
 
 from sqlalchemy.orm import joinedload
-from typing import Optional
+from typing import Optional, Dict
+from urllib.parse import quote_plus
 
 from app.models import User, Query, SearchResult, ResearchProject
 from app.models.research import QueryType
 from app.services.exa_service import PerplexitySearchService
 from app.services.ai_service import AIService
+from app.services.serpapi_service import SerpAPISearchService
+from app.services.search_router import (
+    SearchOrchestrator,
+    OpenAISearchProvider,
+    PerplexitySearchProvider,
+    SerpAPISearchProvider,
+)
 from app.services.analytics_service import AnalyticsService
 from app.utils.exceptions import QuotaExceededError, ExternalAPIError, RateLimitError
 from app import limiter
@@ -22,7 +30,7 @@ analytics = AnalyticsService()
 
 
 def get_services(user: Optional[User] = None):
-    """Get service instances."""
+    """Get service instances for search and AI flows."""
     cache = getattr(current_app, 'cache', None)
     perplexity_key = None
 
@@ -65,7 +73,54 @@ def get_services(user: Optional[User] = None):
         perplexity_key=perplexity_key,
         perplexity_base_url=current_app.config.get('PERPLEXITY_API_BASE_URL')
     )
-    return search_service, ai
+
+    serpapi_key = None
+    if user:
+        try:
+            serpapi_key = user.get_integration_key('serpapi')
+        except AttributeError:
+            serpapi_key = None
+    if not serpapi_key:
+        serpapi_key = current_app.config.get('SERPAPI_API_KEY')
+
+    serp_service = SerpAPISearchService(
+        api_key=serpapi_key,
+        engine=current_app.config.get('SERPAPI_DEFAULT_ENGINE', 'google'),
+        timeout=current_app.config.get('SERPAPI_TIMEOUT', 12)
+    )
+
+    return search_service, ai, serp_service
+
+
+def build_fallback_search_results(query: str, num_results: int, reason: str) -> Dict[str, any]:
+    """Generate placeholder search results when live integrations are unavailable."""
+    max_items = max(1, min(num_results, 5))
+    issued_at = datetime.utcnow()
+    results = []
+    for index in range(max_items):
+        position = index + 1
+        results.append({
+            'id': f'fallback-{position}',
+            'title': f'Insight {position}: {query.title()} snapshot',
+            'url': f'https://researchhub.local/mock/{quote_plus(query)}/{position}',
+            'snippet': f'Hypothetical finding #{position} generated while live search connectivity is pending. Replace once validation succeeds for "{query}".',
+            'author': 'ResearchHub Preview Engine',
+            'published_date': (issued_at - timedelta(days=position)).isoformat() + 'Z',
+            'score': max(0.3, 1 - (index * 0.12)),
+            'source': 'Offline preview'
+        })
+
+    return {
+        'query': query,
+        'answer': f'Preview insights for "{query}" while we finalise live integration validation.',
+        'results': results,
+        'total_results': len(results),
+        'execution_time': 0.01,
+        'search_type': 'offline-fallback',
+        'timestamp': issued_at.isoformat() + 'Z',
+        'fallback': True,
+        'fallback_reason': reason
+    }
 
 
 @bp.route('/search', methods=['POST'])
@@ -115,19 +170,47 @@ def search():
             query_type_enum = QueryType.AUTO
         
         # Get services
-        search_service, ai = get_services(user)
+        search_service, ai, serp_service = get_services(user)
         
         # Enhance query if requested
         enhanced_query = query_text
         if enhance_query and current_app.config.get('ENABLE_AUTO_SUMMARIZATION'):
             enhanced_query = ai.enhance_query(query_text)
         
-        # Perform search
-        search_results = search_service.search(
+        orchestrator = SearchOrchestrator(
+            providers=[
+                OpenAISearchProvider(ai),
+                PerplexitySearchProvider(search_service),
+                SerpAPISearchProvider(serp_service),
+            ],
+            fallback_enabled=current_app.config.get('ENABLE_OFFLINE_SEARCH_FALLBACK', True),
+            fallback_builder=lambda _query, requested, reason: build_fallback_search_results(query_text, requested, reason),
+        )
+
+        search_results, engine_used, engine_attempts, engine_errors, fallback_used = orchestrator.search(
             query=enhanced_query,
             num_results=num_results,
-            search_type=search_type
+            search_type=search_type,
+            enhance_query=enhance_query,
         )
+
+        executed_query = enhanced_query if enhance_query else query_text
+        search_results['query'] = query_text
+        search_results['executed_query'] = executed_query
+        search_results['engine_used'] = engine_used
+        search_results['engine_attempts'] = engine_attempts
+        search_results['engine_errors'] = engine_errors
+        metadata = search_results.setdefault('metadata', {}) if isinstance(search_results, dict) else {}
+        metadata.update({
+            'engine_used': engine_used,
+            'engine_attempts': engine_attempts,
+            'engine_errors': engine_errors,
+            'executed_query': executed_query,
+        })
+        if engine_errors:
+            fallback_reason = '; '.join(f"{err['provider']}: {err['message']}" for err in engine_errors)
+            search_results['fallback_reason'] = fallback_reason
+            metadata['fallback_reason'] = fallback_reason
         
         # Update user's search count
         user.increment_search_count()
@@ -181,13 +264,19 @@ def search():
             query_text=query_text,
             result_count=search_results['total_results'],
             execution_time=search_results['execution_time'],
-            user_tier=user.tier.value
+            user_tier=user.tier.value,
+            search_domain=engine_used
         )
         
         analytics.track_activity(
             user_id=user.id,
             activity_type='search',
-            metadata={'query': query_text, 'results': search_results['total_results']}
+            metadata={
+                'query': query_text,
+                'results': search_results['total_results'],
+                'fallback': fallback_used,
+                'engine': engine_used
+            }
         )
         
         return jsonify(search_results), 200

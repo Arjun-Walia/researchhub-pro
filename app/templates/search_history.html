@@ -68,7 +68,18 @@
                     <tr>
                         <td colspan="5" class="text-center">
                             <div class="empty-state py-4" id="historyLoadingState">
-                                <div class="empty-illustration"><i class="fas fa-spinner fa-spin"></i></div>
+                                <div class="empty-illustration">
+                                    <div class="dot-spinner dot-spinner--lg" aria-hidden="true">
+                                        <div class="dot-spinner__dot"></div>
+                                        <div class="dot-spinner__dot"></div>
+                                        <div class="dot-spinner__dot"></div>
+                                        <div class="dot-spinner__dot"></div>
+                                        <div class="dot-spinner__dot"></div>
+                                        <div class="dot-spinner__dot"></div>
+                                        <div class="dot-spinner__dot"></div>
+                                        <div class="dot-spinner__dot"></div>
+                                    </div>
+                                </div>
                                 <p class="mb-0 text-muted">Loading your recent searches…</p>
                             </div>
                         </td>
@@ -222,7 +233,7 @@
                     </td>
                     <td>${resultsText}</td>
                     <td>${durationText}</td>
-                        <td>${item.created_at ? formatRelativeTime(item.created_at) : '—'}</td>
+                    <td>${item.created_at ? `<span class="relative-time" data-timestamp="${item.created_at}">${formatRelativeTime(item.created_at)}</span>` : '—'}</td>
                     <td class="text-end">
                         <div class="action-group justify-content-end">
                             <button class="btn-icon" type="button" onclick="window.openHistoryQuery(${item.id})" title="Open query">
@@ -239,6 +250,9 @@
 
         renderPagination();
         refreshIcons(tableBody);
+        if (typeof window.refreshRelativeTimes === 'function') {
+            window.refreshRelativeTimes(tableBody);
+        }
     }
 
     async function loadHistory(page = 1) {
@@ -247,7 +261,18 @@
             <tr>
                 <td colspan="5" class="text-center">
                     <div class="empty-state py-4">
-                        <div class="empty-illustration"><i class="fas fa-spinner fa-spin"></i></div>
+                        <div class="empty-illustration">
+                            <div class="dot-spinner dot-spinner--lg" aria-hidden="true">
+                                <div class="dot-spinner__dot"></div>
+                                <div class="dot-spinner__dot"></div>
+                                <div class="dot-spinner__dot"></div>
+                                <div class="dot-spinner__dot"></div>
+                                <div class="dot-spinner__dot"></div>
+                                <div class="dot-spinner__dot"></div>
+                                <div class="dot-spinner__dot"></div>
+                                <div class="dot-spinner__dot"></div>
+                            </div>
+                        </div>
                         <p class="mb-0 text-muted">Refreshing history…</p>
                     </div>
                 </td>

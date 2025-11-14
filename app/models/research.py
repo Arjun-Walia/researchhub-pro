@@ -44,6 +44,8 @@ class ResearchProject(BaseModel):
     # Metadata
     category = Column(String(100))
     keywords = Column(JSON)  # List of keywords
+    collaborators = Column(JSON, default=list)  # [{id, name, email, role}]
+    timeline = Column(JSON, default=list)  # [{id, title, description, occurred_at, state}]
     deadline = Column(db.DateTime)
     
     # Relationships
@@ -61,6 +63,8 @@ class ResearchProject(BaseModel):
             'is_public': self.is_public,
             'category': self.category,
             'keywords': self.keywords,
+            'collaborators': self.collaborators or [],
+            'timeline': self.timeline or [],
             'deadline': self.deadline.isoformat() if self.deadline else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,

@@ -31,16 +31,13 @@ def cache_result(ttl: int = 1800):
 
             cache_key = self._generate_cache_key(func.__name__, args, kwargs)
             cached = self.cache.get(cache_key)
-            if cached:
+            if cached is not None:
                 logger.debug("Perplexity cache hit for %s", func.__name__)
-                try:
-                    return json.loads(cached)
-                except json.JSONDecodeError:
-                    logger.warning("Invalid cache payload for key %s", cache_key)
+                return cached
 
             result = func(self, *args, **kwargs)
             try:
-                self.cache.setex(cache_key, ttl, json.dumps(result))
+                self.cache.set(cache_key, result, ttl=ttl)
             except Exception as exc:  # pragma: no cover - Redis failures shouldn't break flow
                 logger.warning("Failed to cache Perplexity response: %s", exc)
 
@@ -65,7 +62,7 @@ class PerplexitySearchService:
         self.api_key = (api_key or '').strip()
         self.cache = cache
         self.base_url = (base_url or 'https://api.perplexity.ai').rstrip('/')
-        self.default_model = default_model or 'pplx-70b-online'
+        self.default_model = default_model or 'sonar-pro'
         self.timeout = timeout
         self.request_count = 0
         self.last_request_time = None
@@ -163,6 +160,9 @@ class PerplexitySearchService:
 
         if response.status_code == 429:
             raise RateLimitError('Perplexity rate limit reached. Please retry shortly.')
+
+        if response.status_code == 401:
+            raise ExternalAPIError('Perplexity rejected the API key. Double-check the value in Settings and try again.')
 
         if response.status_code >= 400:
             message = response.text[:200]
